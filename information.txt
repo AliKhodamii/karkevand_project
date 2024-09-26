@@ -1,0 +1,15 @@
+{
+    "workingTime": "",
+    "valve": false,
+    "restart": false,
+    "copy": false,
+    "humidity": 0,
+    "duration": 0,
+    "humidityHighLimit": 0,
+    "humidityLowLimit": 0,
+    "lastIrrigationTS": 0,
+    "autoIrrigationEn": false,
+    "howOften": 0,
+    "hour": 0,
+    "minute": 0
+}

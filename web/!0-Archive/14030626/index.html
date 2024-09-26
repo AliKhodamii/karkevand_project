@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSG - karkevand</title>
+  </head>
+  <style>
+    @font-face {
+      font-family: yekan;
+      src: url(./fonts/Yekan.ttf);
+    }
+    * {
+      direction: rtl;
+      font-family: yekan;
+    }
+    body {
+      height: 100vh;
+      /* margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0; */
+    }
+    input {
+      text-align: center;
+      width: 2.8vh;
+      height: 2.6vh;
+      font-size: 2vh;
+      border-radius: 0.3vh;
+    }
+    img {
+      width: 2.5vh;
+      /* height: ; */
+      display: inline-block;
+      height: 100%;
+      vertical-align: middle;
+    }
+    .mainContainer {
+      height: 100%;
+      margin: auto;
+      width: 360px;
+      background-color: #155f82;
+      padding: 10px 10px 0px 10px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .square {
+      height: fit-content;
+      background-color: #fffca8;
+      margin-bottom: 10px;
+      padding-right: 5px;
+      padding-left: 5px;
+    }
+    .connectionDiv {
+      height: 3vh;
+    }
+    .humidityDiv {
+    }
+    .valveDiv {
+    }
+    .autoIrrDiv {
+    }
+    .recentIrrDiv {
+    }
+    table {
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      border-spacing: 0;
+    }
+    table tr td {
+      /* border: 1px solid black; */
+      padding: 0;
+    }
+    .humidityTable tr td {
+      width: 50%;
+    }
+    .buttonDiv {
+      text-align: center;
+    }
+    Button {
+      width: 15vh;
+      height: 4.5vh;
+      margin: 1vh 0 1vh 0;
+      border-radius: 1vh;
+      font-size: 2vh;
+    }
+    .autoIrrTable tr td:nth-child(2) {
+      text-align: center;
+    }
+    .autoIrrTable tr {
+      height: 5vh;
+    }
+    .autoIrrTable tr:nth-child(n + 3):nth-child(-n + 6) {
+      border-bottom: 1px black solid;
+    }
+    .autoIrrTable tr:first-child {
+      text-align: center;
+    }
+    .autoIrrTable {
+      border-collapse: collapse;
+    }
+    .greenButton {
+      background: #196b24;
+      color: white;
+    }
+    .redButton {
+      background: #e97132;
+      color: white;
+    }
+    .saveButton {
+      background: #0f9ed5;
+      color: white;
+    }
+  </style>
+  <body>
+    <div class="mainContainer">
+      <div class="square connectionDiv">
+        <p>متصل</p>
+      </div>
+      <div class="square humidityDiv">
+        <table class="humidityTable">
+          <tr>
+            <td>
+              <p>رطوبت خاک : <span id="humQuality">خوب</span></p>
+            </td>
+            <td style="text-align: center">
+              <p>70%</p>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="square valveDiv">
+        <table class="valveTable">
+          <tr>
+            <td style="text-align: center" colspan="2">
+              <p id="valveStatus">شیر آب بسته است</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="width: 50%">
+              <table>
+                <tr>
+                  <td style="width: 60%">
+                    <div>
+                      <img src="./pics/timer.png" alt="timer" />&nbsp;مدت آبیاری
+                      :
+                    </div>
+                  </td>
+                  <td>
+                    <div>
+                      <div style="display: table; margin: auto">
+                        <div style="display: table-cell">
+                          <input
+                            type="text"
+                            name="durationMin"
+                            id="durationMin"
+                          />
+                        </div>
+                        <span>&nbsp:&nbsp</span>
+                        <div style="display: table-cell">
+                          <input
+                            type="text"
+                            name="durationHour"
+                            id="durationHour"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td style="width: 50%">
+              <div class="buttonDiv">
+                <button id="valveButton" class="greenButton">باز کردن</button>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="square autoIrrDiv">
+        <table class="autoIrrTable">
+          <tr>
+            <td colspan="2">آبیاری خودکار روشن است</td>
+          </tr>
+          <tr>
+            <td style="text-align: center" colspan="2">
+              <button id="autoIrrButton" class="redButton">خاموش کردن</button>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <img src="./pics/calendar.png" alt="timer" /> تاریخ آبیاری بعدی
+            </td>
+            <td>1403/06/30</td>
+          </tr>
+          <tr>
+            <td><img src="./pics/reapeat.png" alt="timer" /> تکرار آبیاری</td>
+            <td>
+              هر
+              <span><input type="text" name="howOften" id="howOften" /></span>
+              روز یکبار
+            </td>
+          </tr>
+          <tr>
+            <td><img src="./pics/clock.png" alt="timer" /> ساعت آبیاری</td>
+            <td>
+              <span
+                ><span><input type="text" name="minute" id="minute" /></span
+              ></span>
+              :
+              <span
+                ><span><input type="text" name="hour" id="hour" /></span
+              ></span>
+            </td>
+          </tr>
+          <tr>
+            <td><img src="./pics/timer.png" alt="timer" /> مدت آبیاری</td>
+            <td>
+              <span
+                ><span
+                  ><input
+                    type="text"
+                    name="AIdurationMin"
+                    id="AIdurationMin" /></span
+              ></span>
+              :
+              <span
+                ><span
+                  ><input
+                    type="text"
+                    name="AIdurationHour"
+                    id="AIdurationMin  " /></span
+              ></span>
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: center" colspan="2">
+              <button id="autoIrrSave" class="saveButton">ذخیره</button>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="square recentIrrDiv"></div>
+    </div>
+  </body>
+</html>

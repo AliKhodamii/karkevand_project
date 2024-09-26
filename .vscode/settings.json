@@ -1,0 +1,26 @@
+{
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[cpp]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools"
+  },
+  "cSpell.words": [
+    "CREG",
+    "CSTT",
+    "EEPROM",
+    "emqxsl",
+    "irancell",
+    "karkevan",
+    "loopcnt",
+    "mosquitto",
+    "mqtt",
+    "PROGMEM",
+    "strenght",
+    "yekan",
+    "رطوبت",
+    "متصل"
+  ],
+  "files.associations": {
+    "*.embeddedhtml": "html",
+    "*.tpp": "cpp"
+  }
+}
