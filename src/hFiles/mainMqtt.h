@@ -111,7 +111,7 @@ const char pass[] = "";       // GPRS password, if any
 //----------------------------
 
 // MQTT broker details-----------------------
-const char *broker = "test.mosquitto.org";
+const char *broker = "broker.mqtt.cool";
 const int port = 1883; // MQTT port
 
 // Topics for publishing/subscribing
@@ -199,25 +199,27 @@ void setup()
         waitTime = millis();
         SerialMon.println("modem  network is connected");
         // Connect to the GPRS network
-        while (!modem.gprsConnect(apn, user, pass))
+        if (!modem.isGprsConnected())
         {
-            // blink 3 times
-            blink();
-            blink();
-            blink();
-
-            SerialMon.print("Connecting to the GPRS...");
-            if (!modem.gprsConnect(apn, user, pass))
+            while (!modem.gprsConnect(apn, user, pass))
             {
-                SerialMon.println(" fail");
-            }
-            SerialMon.println(" success");
-        }
+                // blink 3 times
+                blink();
+                blink();
+                blink();
 
-        // if GPRS wasn't connected after 2 mins restart esp
-        if ((millis() - waitTime) > 120000)
-        {
-            sysRestart();
+                SerialMon.print("Connecting to the GPRS...");
+                if (!modem.gprsConnect(apn, user, pass))
+                {
+                    SerialMon.println(" fail");
+                }
+                SerialMon.println(" success");
+                // if GPRS wasn't connected after 2 mins restart esp
+                if ((millis() - waitTime) > 120000)
+                {
+                    sysRestart();
+                }
+            }
         }
     }
     else
