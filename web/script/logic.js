@@ -2,20 +2,14 @@ var subTopic = "karSSG/ESP";
 var pubTopic = "karSSG/client";
 var sysInfoJson = "";
 var updateAutoIrrSec = true;
-var updateDurationEn = true;
 
 var sysInfo;
-
-var client;
-
-document.getElementById("valveButton").onclick = vlvBtnClick;
-
 
 // connect to mqtt broker
 mqttConnect();
 
 function mqttConnect() {
-  client = mqtt.connect("ws://test.mosquitto.org:8080");
+  const client = mqtt.connect("ws://test.mosquitto.org:8081");
 
   client.on("connect", () => {
     console.log("Connected to broker");
@@ -30,14 +24,14 @@ function mqttConnect() {
     console.log("Received message:", sysInfoJson);
 
     // update ui if info came
-    // if (sysInfoJson.indexOf("info") != -1) {
-    updateUI();
-    // }
+    if (sysInfoJson.indexOf("info") != -1) {
+      updateUI();
+    }
   });
 }
 function updateUI() {
   //decode json
-  // sysInfoJson = sysInfoJson.substring(sysInfoJson.indexOf("info") + 4);
+  sysInfoJson = sysInfoJson.substring(sysInfoJson.indexOf("info") + 4);
   sysInfo = JSON.parse(sysInfoJson);
 
   //update connection status
@@ -47,7 +41,7 @@ function updateUI() {
   updateHumidity();
 
   // update duration
-  if (updateDurationEn) updateDuration();
+  updateDuration();
 
   //update valve status
   updateVlvStat();
@@ -92,7 +86,6 @@ function updateHumidity() {
     sysInfo.humidity + "%";
 }
 function updateDuration() {
-  doUpdateDuration = false;
   var m = 0;
   var h = 0;
   h = Math.floor(sysInfo.duration / 60);
@@ -160,7 +153,6 @@ function updateAutoIrrEn() {
     document.getElementsByName("loadingPic")[4].classList.add("displayNone");
 
     // update button
-    document.getElementById("autoIrrButton").removeAttribute("disabled");
     document.getElementById("autoIrrButton").textContent = "خاموش کردن";
     document.getElementById("autoIrrButton").classList.remove("loadingButton");
     document.getElementById("autoIrrButton").classList.remove("greenButton");
@@ -220,7 +212,6 @@ function updateAutoIrrEn() {
     document.getElementsByName("loadingPic")[4].classList.add("displayNone");
 
     // update button
-    document.getElementById("autoIrrButton").removeAttribute("disabled");
     document.getElementById("autoIrrButton").textContent = "روشن کردن";
     document.getElementById("autoIrrButton").classList.remove("loadingButton");
     document.getElementById("autoIrrButton").classList.add("greenButton");
@@ -254,134 +245,4 @@ function updateAutoIrrEn() {
   }
 }
 
-
-function vlvBtnClick() {
-  // check if valve is open
-
-  if (sysInfo.valve) {
-    console.log("Closing the valve");
-    client.subscribe(subTopic, (err) => {
-      if (!err) {
-        client.publish(pubTopic, "close valve");
-      }
-    });
-
-    // update button css
-    document.getElementById("valveButton").classList.remove("redButton");
-    document.getElementById("valveButton").classList.add("loadingButton");
-    document.getElementById("valveButton").textContent = "در حال ارسال...";
-
-    // release duration update En
-    updateDurationEn = true;
-
-
-    // be in loop until the response comes
-    while (1) {
-      client.on("message", (topic, message) => {
-        sysInfoJson = message.toString();
-        console.log("Received message:", sysInfoJson);
-      });
-      // listen for response
-      if (sysInfoJson.indexOf("valve is close") != -1) {
-        // updateUI();
-        break;
-      }
-    }
-  }
-
-  else {
-
-    // create a json to send
-    var cmd = {};
-    var hour = document.getElementById("durationHour").value;
-    var min = document.getElementById("durationMin").value;
-    var irrDuration = (Number(hour) * 60) + Number(min);
-    cmd.valve = 1;
-    cmd.duration = irrDuration;
-    vlvOpenCmd = "valve open" + JSON.stringify(cmd);
-
-    console.log(vlvOpenCmd);
-
-    // publish open cmd
-    client.subscribe(subTopic, (err) => {
-      if (!err) {
-        client.publish(pubTopic, vlvOpenCmd);
-      }
-    });
-
-    // update button css
-    document.getElementById("valveButton").classList.remove("greenButton");
-    document.getElementById("valveButton").classList.add("loadingButton");
-    document.getElementById("valveButton").textContent = "در حال ارسال...";
-
-    // release duration update En
-    updateDurationEn = true;
-
-    // be in loop until the response comes
-    while (1) {
-      client.on("message", (topic, message) => {
-        sysInfoJson = message.toString();
-        console.log("Received message:", sysInfoJson);
-      });
-      // listen for response
-      if (sysInfoJson.indexOf("valve is open") != -1) {
-        // updateUI();
-        break;
-      }
-    }
-  }
-}
-
-function autoIrrBtnClick() {
-
-  if (sysInfo.autoIrrigationEn) {
-
-
-  }
-
-  else {
-    // create command json
-    var cmd = {};
-    var hour = document.getElementById("AIdurationHour").value;
-    var min = document.getElementById("AIdurationMin").value;
-    var irrHowOften = document.getElementById("howOften").value;
-    var AImin = document.getElementById("min").value;
-    var AIhour = document.getElementById("hour").value;
-    var irrDuration = (Number(hour) * 60) + Numner(min);
-    cmd.autoIrrigationEn = 1;
-    cmd.duration = irrDuration;
-    cmd.min = AImin;
-    cmd.hour = AIhour;
-    cmd.howOften = irrHowOften;
-
-    var updInfoJson = "enable autoIrrigation" + JSON.stringify(cmd);
-
-    // publish open cmd
-    client.subscribe(subTopic, (err) => {
-      if (!err) {
-        client.publish(pubTopic, updInfoJson);
-      }
-    });
-  }
-
-  //update button
-  document.getElementById("autoIrrButton").classList.remove("greenButton");
-  document.getElementById("autoIrrButton").classList.add("loadingButton");
-  document.getElementById("autoIrrButton").textContent = "در حال ارسال...";
-
-
-  //wait untill response comes
-  while (true) {
-    client.on("message", (topic, message) => {
-      sysInfoJson = message.toString();
-      console.log("Received message:", sysInfoJson);
-    });
-    // listen for response
-    if (sysInfoJson.indexOf("autoIrrigation is enable") != -1) {
-      // updateUI();
-      break;
-    }
-  }
-}
-
-function saveBtnClick() { }
+// comment

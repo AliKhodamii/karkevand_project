@@ -111,7 +111,7 @@ const char pass[] = "";       // GPRS password, if any
 //----------------------------
 
 // MQTT broker details-----------------------
-const char *broker = "broker.mqtt.cool";
+const char *broker = "test.mosquitto.org";
 const int port = 1883; // MQTT port
 
 // Topics for publishing/subscribing
@@ -265,6 +265,7 @@ void setup()
 }
 void loop()
 {
+
     // check if sim800 is connected to network
     if (!modem.isNetworkConnected())
     {
@@ -351,6 +352,7 @@ void loop()
     // (every second) check if valve is 1 & duration is finished or not
     if (millis() - previousTime1s > 1000 && valve)
     {
+
         Serial.println("check if valve is open and duration is finished");
         if (valve && ((millis() - irrigationStartTime) / 1000) > duration * 60)
         {
@@ -364,6 +366,8 @@ void loop()
     // (every minutes) check if autoIrrigation is on or off & check if it's time or not
     if (millis() - previousTime5s > 5000 && autoIrrEn && !valve)
     {
+        Serial.println("");
+        Serial.println("");
         // update rtc time and date
         int currentTimestamp = rtcTimeDate();
         // check if its irrigation time
@@ -586,11 +590,19 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
     // blink when message arrived
     blink();
 
+    Serial.println("---------------------------");
+    Serial.println("");
+    Serial.println("");
+
     SerialMon.print("Message arrived [");
     SerialMon.print(topic);
     SerialMon.print("]: ");
     SerialMon.write(payload, length);
     SerialMon.println();
+
+    Serial.println("");
+    Serial.println("");
+    Serial.println("---------------------------");
 
     String message = "";
     for (uint i = 0; i < length; i++)
