@@ -13,16 +13,15 @@ void setup()
     Serial.println("Creating data...");
     EEPROM.begin(EEPROM_SIZE);
 
-    doc["workingTime"] = "";
+    doc["time"] = "";
     doc["valve"] = true;
     doc["restart"] = true;
-    doc["copy"] = false;
     doc["humidity"] = 0;
     doc["duration"] = 2;
-    doc["humidityHighLimit"] = 0;
-    doc["humidityLowLimit"] = 0;
-    doc["lastIrrigationTS"] = 1725646670;
-    doc["autoIrrigationEn"] = false;
+    doc["humHiLi"] = 0;
+    doc["humLoLi"] = 0;
+    doc["lastIrrTS"] = 1725646670;
+    doc["autoIrrEn"] = false;
     doc["howOften"] = 3;
     doc["hour"] = 21;
     doc["minute"] = 0;

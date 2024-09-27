@@ -20,17 +20,17 @@
 bool valve = false;
 bool s_valve = false;
 bool restart = false;
-bool copy = false;
-bool autoIrrigationEn = false;
+bool autoIrrEn = false;
 int humidity = 0;
 int duration = 0;
-int humidityHighLimit = 0;
-int humidityLowLimit = 0;
-int lastIrrigationTS = 0;
-int nextIrrigationTS = 0;
+int humHiLi = 0;
+int humLoLi = 0;
+int lastIrrTS = 0;
+int nextIrrTS = 0;
 int howOften = 0;
 int hour = 0;
 int minute = 0;
+int mqttConTries = 0;
 // ---------------------------
 
 // time variables-------------
@@ -86,10 +86,12 @@ void getFromEEPROM();
 void putToEEPROM();
 void blink();
 void humidityRead();
+void sysRestart();
 //-----------------------------------
 
 // declare json handler
 JsonDocument sysInfo;
+JsonDocument clientInfo;
 //--------------------
 
 // Initialize SoftwareSerial for SIM800L----
@@ -144,7 +146,7 @@ void setup()
     digitalWrite(valvePin, 0);
     digitalWrite(lowHumidityPin, 0);
     digitalWrite(normalHumidityPin, 0);
-    digitalWrite(sim800ResetPin, 0);
+    digitalWrite(sim800ResetPin, 1);
     digitalWrite(comPin, 0);
 
     // first http get request to get initial values
@@ -154,7 +156,6 @@ void setup()
     // initial values
     valve = false;
     restart = false;
-    copy = false;
 
     // first http post request to post inital values (like valve = false)
     SerialMon.println("put data to EEPROM...");
@@ -166,25 +167,36 @@ void setup()
     createNextIrrTimeStamp();
 
     // if sim800 isn't registered we will wait
-    while (!modem.isNetworkConnected())
+    if (!modem.isNetworkConnected())
     {
-        // blink twice
-        blink();
-        blink();
+        waitTime = millis();
+        while (!modem.isNetworkConnected())
+        {
+            // blink twice
+            blink();
+            blink();
 
-        // start modem (gsm module)
-        modem.restart();
+            // start modem (gsm module)
+            modem.restart();
 
-        // Print modem information
-        String modemInfo = modem.getModemInfo();
-        SerialMon.print("Modem Info: ");
-        SerialMon.println(modemInfo);
-        Serial.println("modem is not connected to network, waiting 5 seconds...");
-        delay(5000);
+            // Print modem information
+            String modemInfo = modem.getModemInfo();
+            SerialMon.print("Modem Info: ");
+            SerialMon.println(modemInfo);
+            Serial.println("modem is not connected to network, waiting 5 seconds...");
+            delay(5000);
+
+            // if network didn't connect in 2 mins
+            if (millis() - waitTime > 120000)
+            {
+                sysRestart();
+            }
+        }
     }
     // check if modem is connected to network
     if (modem.isNetworkConnected())
     {
+        waitTime = millis();
         SerialMon.println("modem  network is connected");
         // Connect to the GPRS network
         while (!modem.gprsConnect(apn, user, pass))
@@ -200,6 +212,12 @@ void setup()
                 SerialMon.println(" fail");
             }
             SerialMon.println(" success");
+        }
+
+        // if GPRS wasn't connected after 2 mins restart esp
+        if ((millis() - waitTime) > 120000)
+        {
+            sysRestart();
         }
     }
     else
@@ -260,7 +278,7 @@ void loop()
             // if Network wasn't connected after 2 mins restart esp
             if ((millis() - waitTime) > 120000)
             {
-                ESP.restart();
+                sysRestart();
             }
         }
     }
@@ -287,7 +305,7 @@ void loop()
             // if GPRS wasn't connected after 2 mins restart esp
             if ((millis() - waitTime) > 120000)
             {
-                ESP.restart();
+                sysRestart();
             }
         }
     }
@@ -295,6 +313,9 @@ void loop()
     // reconnect to mqtt
     if (!mqtt.connected())
     {
+        // add one to mqttConTries
+        mqttConTries++;
+
         // blink 4 times
         blink();
         blink();
@@ -307,6 +328,7 @@ void loop()
             SerialMon.println(" connected");
             mqtt.publish(topicInit, "GsmClientTest started");
             mqtt.subscribe(topicLed);
+            mqttConTries = 0;
         }
         else
         {
@@ -317,6 +339,12 @@ void loop()
 
     // mqtt loop
     mqtt.loop();
+
+    // if connection to mqtt was unsuccessful for 15 times restart system
+    if (mqttConTries >= 15)
+    {
+        sysRestart();
+    }
 
     // (every second) check if valve is 1 & duration is finished or not
     if (millis() - previousTime1s > 1000 && valve)
@@ -332,13 +360,13 @@ void loop()
     }
 
     // (every minutes) check if autoIrrigation is on or off & check if it's time or not
-    if (millis() - previousTime5s > 5000 && autoIrrigationEn && !valve)
+    if (millis() - previousTime5s > 5000 && autoIrrEn && !valve)
     {
         // update rtc time and date
         int currentTimestamp = rtcTimeDate();
         // check if its irrigation time
         Serial.println("Checking if it's irrigation time");
-        if ((currentTimestamp > nextIrrigationTS))
+        if ((currentTimestamp > nextIrrTS))
         {
             Serial.println("auto Irrigation will happen now...");
             if (valveOpen())
@@ -346,7 +374,7 @@ void loop()
                 giveInfo();
             }
         }
-        else if ((currentTimestamp - lastIrrigationTS) > (howOften * 24 * 60 * 60))
+        else if ((currentTimestamp - lastIrrTS) > (howOften * 24 * 60 * 60))
         {
             Serial.println("irrigation day , not irrigation hour yet");
         }
@@ -518,13 +546,12 @@ void dataUpdate()
 {
     s_valve = sysInfo["valve"];
     restart = sysInfo["restart"];
-    copy = sysInfo["copy"];
     humidity = sysInfo["humidity"];
     duration = sysInfo["duration"];
-    humidityHighLimit = sysInfo["humidityHighLimit"];
-    humidityLowLimit = sysInfo["humidityLowLimit"];
-    lastIrrigationTS = sysInfo["lastIrrigationTS"];
-    autoIrrigationEn = sysInfo["autoIrrigationEn"];
+    humHiLi = sysInfo["humHiLi"];
+    humLoLi = sysInfo["humLoLi"];
+    lastIrrTS = sysInfo["lastIrrTS"];
+    autoIrrEn = sysInfo["autoIrrEn"];
     howOften = sysInfo["howOften"];
     hour = sysInfo["hour"];
     minute = sysInfo["minute"];
@@ -533,16 +560,15 @@ void dataPrepare()
 {
     humidityRead();
 
-    sysInfo["workingTime"] = myTime();
+    sysInfo["time"] = myTime();
     sysInfo["valve"] = valve;
     sysInfo["restart"] = restart;
     sysInfo["humidity"] = humidity;
-    sysInfo["copy"] = copy;
     sysInfo["duration"] = duration;
-    sysInfo["humidityHighLimit"] = humidityHighLimit;
-    sysInfo["humidityLowLimit"] = humidityLowLimit;
-    sysInfo["lastIrrigationTS"] = lastIrrigationTS;
-    sysInfo["autoIrrigationEn"] = autoIrrigationEn;
+    sysInfo["humHiLi"] = humHiLi;
+    sysInfo["humLoLi"] = humLoLi;
+    sysInfo["lastIrrTS"] = lastIrrTS;
+    sysInfo["autoIrrEn"] = autoIrrEn;
     sysInfo["humidity"] = humidity;
     sysInfo["howOften"] = howOften;
     sysInfo["hour"] = hour;
@@ -553,6 +579,8 @@ void dataPrepare()
 }
 void mqttCallback(char *topic, byte *payload, unsigned int length)
 {
+    String sendMessage;
+    String recJson = "";
     // blink when message arrived
     blink();
 
@@ -572,67 +600,99 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
     if (message.indexOf("valve open") != -1)
     {
         SerialMon.println("valve open command is received\nopening valve");
-        if (message.substring(message.indexOf("open") + 5) != "")
-        {
-            duration = message.substring(message.indexOf("open") + 5).toInt();
-            Serial.println("duration updated");
-        }
-        if (valveOpen())
-            mqtt.publish(topicInit, "valve is open");
-        else
-            mqtt.publish(topicInit, "valve is in prev mode");
+
+        // get info json from client message
+        recJson = message.substring(message.indexOf("{"));
+        Serial.println(recJson);
+        deserializeJson(clientInfo, recJson);
+
+        // update duration and save it in EEPROM
+        duration = clientInfo["duration"];
+        putToEEPROM();
+
+        // open valve and send message to client
+        valveOpen();
+
+        // prepare data to send
+        dataPrepare();
+        sendMessage = "valve is open, info" + sysInfoJson;
+        Serial.println("data sent to client" + sendMessage);
+        mqtt.publish(topicInit, sendMessage.c_str());
     }
-    else if (message == "valve close")
+    else if (message.indexOf("valve close") != -1)
     {
         SerialMon.println("valve close command is received\nclosing valve");
-        if (valveClose())
-        {
-            mqtt.publish(topicInit, "valve is close");
-        }
-        else
-        {
-            mqtt.publish(topicInit, "valve is in prev mode");
-        }
+
+        // close valve and send message to client
+        valveClose();
+
+        dataPrepare();
+        sendMessage = "valve is closed, info" + sysInfoJson;
+        Serial.println(sendMessage.c_str());
+        mqtt.publish(topicInit, sendMessage.c_str());
     }
-    else if (message == "give info")
+    else if (message.indexOf("give info") != -1)
     {
         dataPrepare();
-        // sysInfoJson = "info=" + sysInfoJson;
-        Serial.println(sysInfoJson.c_str());
-        mqtt.publish(topicInit, sysInfoJson.c_str());
+        sendMessage = "info" + sysInfoJson;
+        Serial.println(sendMessage.c_str());
+        mqtt.publish(topicInit, sendMessage.c_str());
     }
-    else if (message == "autoIrrigationOn")
+    else if (message.indexOf("autoIrrigationOn") != -1)
     {
-        autoIrrigationEn = 1;
+        // get info json from client message
+        recJson = message.substring(message.indexOf("{"));
+        deserializeJson(clientInfo, recJson);
+
+        // update new values and save in EEPROM
+        autoIrrEn = clientInfo["autoIrrEn"];
+        howOften = clientInfo["howOften"];
+        hour = clientInfo["hour"];
+        minute = clientInfo["minute"];
+        duration = clientInfo["duration"];
         putToEEPROM();
+
         createNextIrrTimeStamp();
-        mqtt.publish(topicInit, "autoIrrigation is on");
+
+        dataPrepare();
+        sendMessage = "autoIrrigation is on, info" + sysInfoJson;
+        Serial.println(sendMessage.c_str());
+        mqtt.publish(topicInit, sendMessage.c_str());
     }
-    else if (message == "autoIrrigationOff")
+    else if (message.indexOf("autoIrrigationOff") != -1)
     {
-        autoIrrigationEn = 0;
+        // turn of auto irr and save in EEPROM
+        autoIrrEn = 0;
         putToEEPROM();
-        mqtt.publish(topicInit, "autoIrrigation is off");
+
+        // send message to client
+        dataPrepare();
+        sendMessage = "autoIrr is off, info" + sysInfoJson;
+        Serial.println(sendMessage.c_str());
+        mqtt.publish(topicInit, sendMessage.c_str());
     }
-    else if (message.indexOf("set Irr time to") != -1)
+    else if (message.indexOf("autoIrrigationUpdate") != -1)
     {
-        String SHour = message.substring(message.indexOf("to") + 3, message.indexOf("to") + 5);
-        hour = SHour.toInt();
-        Serial.println(SHour);
-        String SMinute = message.substring(message.indexOf("to") + 6);
-        minute = SMinute.toInt();
-        Serial.println(SMinute);
+
+        // get info json from client message
+        recJson = message.substring(message.indexOf("{"));
+        deserializeJson(clientInfo, recJson);
+
+        // update new values and save in EEPROM
+        autoIrrEn = clientInfo["autoIrrEn"];
+        howOften = clientInfo["howOften"];
+        hour = clientInfo["hour"];
+        minute = clientInfo["minute"];
+        duration = clientInfo["duration"];
         putToEEPROM();
+
         createNextIrrTimeStamp();
-        mqtt.publish(topicInit, "hour is set to what you wanted");
-    }
-    else if (message.indexOf("set howOften to") != -1)
-    {
-        String SDay = message.substring(message.indexOf("to") + 3);
-        howOften = SDay.toInt();
-        putToEEPROM();
-        createNextIrrTimeStamp();
-        mqtt.publish(topicInit, "how Often is setted");
+
+        // send message to client
+        dataPrepare();
+        sendMessage = "autoIrr updated, info" + sysInfoJson;
+        Serial.println(sendMessage.c_str());
+        mqtt.publish(topicInit, sendMessage.c_str());
     }
 }
 bool mqttConnect()
@@ -645,7 +705,7 @@ bool valveOpen()
     valve = true;
     digitalWrite(valvePin, valve);
     irrigationStartTime = millis();
-    lastIrrigationTS = rtcTimeDate();
+    lastIrrTS = rtcTimeDate();
     putToEEPROM();
     createNextIrrTimeStamp();
     return 1;
@@ -663,7 +723,7 @@ String myTime()
     int hours = (millis() - days * 86400000) / 3600000;
     int minutes = ((millis() - days * 86400000) - hours * 3600000) / 60000;
     int seconds = (millis() / 1000) % 60;
-    return String(days) + "d :" + String(hours) + "h :" + String(minutes) + "m :" + String(seconds) + "s";
+    return String(days) + ":" + String(hours) + ":" + String(minutes) + ":" + String(seconds);
 }
 int rtcTimeDate()
 {
@@ -713,7 +773,7 @@ int rtcTimeDate()
 }
 void lastIrrTimeDate()
 {
-    time_t timestamp = lastIrrigationTS;
+    time_t timestamp = lastIrrTS;
     // Convert timestamp to a struct tm for breakdown
     struct tm *timeInfo;
 
@@ -742,8 +802,8 @@ void lastIrrTimeDate()
 }
 int createNextIrrTimeStamp()
 {
-    nextIrrigationTS = lastIrrigationTS + (howOften * 24 * 60 * 60);
-    time_t timestamp = nextIrrigationTS;
+    nextIrrTS = lastIrrTS + (howOften * 24 * 60 * 60);
+    time_t timestamp = nextIrrTS;
     // Convert timestamp to a struct tm for breakdown
     struct tm *timeInfo;
 
@@ -784,27 +844,9 @@ int createNextIrrTimeStamp()
     // Print the Unix timestamp
     Serial.print("next irrigation timestamp: ");
     Serial.println(t);
-    nextIrrigationTS = t;
+    nextIrrTS = t;
     return t;
 }
-// // int rtcHour()
-// {
-//     String timeString = modem.getGSMDateTime(DATE_FULL);
-//     int hour = timeString.substring(9, 11).toInt();
-//     return hour;
-// }
-// int rtcMinute()
-// {
-//     String timeString = modem.getGSMDateTime(DATE_FULL);
-//     int minute = timeString.substring(12, 14).toInt();
-//     return minute;
-// }
-// int rtcDay()
-// {
-//     String timeString = modem.getGSMDateTime(DATE_FULL);
-//     int day = timeString.substring(6, 8).toInt();
-//     return day;
-// }
 
 void giveInfo()
 {
@@ -863,4 +905,15 @@ void humidityRead()
         delay(10);
     }
     humidity = humidity / 10;
+
+    // scaling
+}
+void sysRestart()
+{
+
+    digitalWrite(sim800ResetPin, 0);
+    delay(1000);
+    digitalWrite(sim800ResetPin, 1);
+    delay(100);
+    ESP.restart();
 }

@@ -1,20 +1,34 @@
-the data that comes from ESP must be like this:
-"valve is open, info{json(full)}"
-"valve is close, info{json(full)}"
-"auto irr is on, info{json(full)}"
-"auto irr is off, info{json(full)}"
+messaged from client:
+1 - open valve    : "valve open, info{json(duration,valve)}"
+2 - close valve   : "valve close"
+3 - give info     : "give info"
+3 - autoIrrON     : "autoIrrigationOn, info{json(autoIrrigationEn,howOften,duration,hour,min)}"
+4 - autoIrrOff    : "autoIrrigationOff"
+5 - autoIrrUpdate : "autoIrrigationUpdate, info{json(autoIrrigationEn,howOften,duration,hour,min)}"
 
-the data that goes for valve open must be like this:
-"valve open, info{json(duration,valve)}"
 
-the data that goes for valve close must be like this:
-"valve close, info{json(valve)}"
+messaged from ESP:
+1 - valve is open  : "valve is open, info{json(full)}"
+2 - valve is close : "valve is close, info{json(full)}"
+3 - autoIrrOn      : "autoIrr is on, info{json(full)}"
+4 - autoIrrOff     : "autoIrr is off, info{json(full)}"
+5 - autoIrrUpd     : "autoIrr updated, info{json(full)}"
+6 - info           : "info{json(full)}"
 
-the data that goes for auto irrigation on must be like this:
-"auto irr on, info{json(autoIrrigationEn,howOften,duration,hour,min)}"
 
-the data that goes for auto irrigation off must be like this:
-"auto irr off, info{json(autoIrrigationEn)}"
-
-the data that goes for save button must be like this:
-"auto irr update, info{json(autoIrrigationEn,howOften,duration,hour,min)}"
+sysInfoJson:
+{
+  "time": "0:0:0:3",
+  "valve": false,
+  "restart": false,
+  "copy": false,
+  "humidity": 17,
+  "duration": 1,
+  "humHiLi": 0,
+  "humLoLi": 0,
+  "lastIrrTS": 1727427421,
+  "autoIrrEn": true,
+  "howOften": 1,
+  "hour": 8,
+  "minute": 57
+}

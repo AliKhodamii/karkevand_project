@@ -128,10 +128,8 @@ void setup()
 {
     Serial.begin(9600);
     delay(5000);
-    String tmp = "set time to 21:00";
-    Serial.println(tmp.indexOf("to"));
-    Serial.println(tmp.substring(tmp.indexOf("to") + 2, tmp.indexOf("to") + 4));
-    Serial.println(tmp.substring(tmp.indexOf("to") + 5));
+    String tmp = "valve open, info{\"duration\": 5 , \"valve\":open}";
+    Serial.println(tmp.substring(tmp.indexOf("{")));
 }
 
 void loop()
