@@ -27,38 +27,56 @@ var t = setInterval(getInfo, 5000);
 //------------functions------------\\
 
 function mqttConnect() {
-  client = mqtt.connect("ws://test.mosquitto.org:8080");
+  // connection parameters
+  const brokerUrl = "mqtt://test.mosquitto.org:8081"; // Public test broker
+  const options = {
+    clientId: "web", // Client ID (optional)
+    keepalive: 60,
+    reconnectPeriod: 1000, // Reconnect after 1 second if disconnected
+  };
+
+  //connect
+  client = mqtt.connect(brokerUrl, options);
+
+  //connection flag
+  let isConnected = false;
 
   client.on("connect", () => {
     console.log("Connected to broker");
+    isConnected = true;
     getInfo();
   });
   client.on("message", (topic, message) => {
     unsuccessfulTries = 0;
     sysInfoJson = message.toString();
     console.log("Received message:", sysInfoJson);
-    sysInfoJson = sysInfoJson.substring(sysInfoJson.indexOf("{"));
+    var bracketIndex = sysInfoJson.indexOf("{");
 
-    updateUI();
+    if (bracketIndex != -1) {
+      sysInfoJson = sysInfoJson.substring(bracketIndex);
+      updateUI();
+    }
   });
 }
 
 function getInfo() {
-  // add one to unsuccessful tries
-  unsuccessfulTries++;
+  if (client.connected) {
+    // add one to unsuccessful tries
+    unsuccessfulTries++;
 
-  //mqtt publish
-  console.log("getting info try number: " + unsuccessfulTries);
-  client.subscribe(subTopic, (err) => {
-    if (!err) {
-      client.publish(pubTopic, "give info");
-      console.log("send data: give info");
+    //mqtt publish
+    console.log("getting info try number: " + unsuccessfulTries);
+    client.subscribe(subTopic, (err) => {
+      if (!err) {
+        client.publish(pubTopic, "give info");
+        console.log("send data: give info");
+      }
+    });
+
+    // if couldn't connect to mqtt after 15 tries
+    if (unsuccessfulTries >= 15) {
+      // notConnected();
     }
-  });
-
-  // if couldn't connect to mqtt after 15 tries
-  if (unsuccessfulTries >= 15) {
-    // notConnected();
   }
 }
 

@@ -18,8 +18,8 @@ void setup()
     doc["restart"] = true;
     doc["humidity"] = 0;
     doc["duration"] = 2;
-    doc["humHiLi"] = 0;
-    doc["humLoLi"] = 0;
+    doc["humHiLi"] = 800;
+    doc["humLoLi"] = 1024;
     doc["lastIrrTS"] = 1725646670;
     doc["autoIrrEn"] = false;
     doc["howOften"] = 3;

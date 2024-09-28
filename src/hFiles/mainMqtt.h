@@ -14,6 +14,7 @@
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <EEPROM.h>
+#include <math.h>
 // ---------------------------
 
 // control variables---------
@@ -23,8 +24,8 @@ bool restart = false;
 bool autoIrrEn = false;
 int humidity = 0;
 int duration = 0;
-int humHiLi = 0;
-int humLoLi = 0;
+int humHiLi = 800;
+int humLoLi = 1024;
 int lastIrrTS = 0;
 int nextIrrTS = 0;
 int howOften = 0;
@@ -920,7 +921,20 @@ void humidityRead()
     }
     humidity = humidity / 10;
 
+    Serial.print("unscaled humidity: ");
+    Serial.println(humidity);
     // scaling
+    float shib = -100.0 / (humLoLi - humHiLi);
+    float result = shib * (humidity - humHiLi) + 100;
+    humidity = round(result);
+    if (humidity <= 0)
+    {
+        humidity = 0;
+    }
+    else if (humidity >= 100)
+    {
+        humidity = 100;
+    }
 }
 void sysRestart()
 {
