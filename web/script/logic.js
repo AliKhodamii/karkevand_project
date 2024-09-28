@@ -11,6 +11,7 @@ var client;
 //asign functions to buttons
 document.getElementById("valveButton").onclick = vlvBtnClick;
 document.getElementById("autoIrrButton").onclick = autoIrrBtnClick;
+document.getElementById("autoIrrSave").onclick = saveBtnClick;
 
 // connect to mqtt broker
 mqttConnect();
@@ -56,8 +57,8 @@ function getInfo() {
   });
 
   // if couldn't connect to mqtt after 15 tries
-  if (unsuccessfulTries >= 2) {
-    notConnected();
+  if (unsuccessfulTries >= 15) {
+    // notConnected();
   }
 }
 
@@ -386,4 +387,36 @@ function autoIrrBtnClick() {
   // waitForResponse();
 }
 
-function saveBtnClick() {}
+function saveBtnClick() {
+  // release auto irr section to be updated
+  updateAutoIrrSec = true;
+
+  // create command json
+  var cmd = {};
+  var hour = document.getElementById("AIdurationHour").value;
+  var min = document.getElementById("AIdurationMin").value;
+  var irrHowOften = document.getElementById("howOften").value;
+  var AImin = document.getElementById("minute").value;
+  var AIhour = document.getElementById("hour").value;
+  var irrDuration = Number(hour) * 60 + Number(min);
+  cmd.autoIrrEn = sysInfo.autoIrrEn;
+  cmd.duration = irrDuration;
+  cmd.min = AImin;
+  cmd.hour = AIhour;
+  cmd.howOften = irrHowOften;
+
+  var updInfoJson = "autoIrrigationUpdate, info" + JSON.stringify(cmd);
+  // publish open cmd
+  client.subscribe(subTopic, (err) => {
+    if (!err) {
+      client.publish(pubTopic, updInfoJson);
+      console.log("data sent: " + updInfoJson);
+    }
+  });
+
+  //update button
+  document.getElementById("autoIrrSave").classList.remove("greenButton");
+  document.getElementById("autoIrrSave").classList.remove("redButton");
+  document.getElementById("autoIrrSave").classList.add("loadingButton");
+  document.getElementById("autoIrrSave").textContent = "در حال ارسال...";
+}
