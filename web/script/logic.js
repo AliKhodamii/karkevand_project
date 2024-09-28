@@ -3,41 +3,86 @@ var pubTopic = "karSSG/client";
 var sysInfoJson = "";
 var updateAutoIrrSec = true;
 var updateDurationEn = true;
+var unsuccessfulTries = 0;
 
 var sysInfo;
-
 var client;
 
+//asign functions to buttons
 document.getElementById("valveButton").onclick = vlvBtnClick;
-
+document.getElementById("autoIrrButton").onclick = autoIrrBtnClick;
 
 // connect to mqtt broker
 mqttConnect();
+
+// publish give info message every 5 seconds
+var t = setInterval(getInfo, 5000);
+
+//------------functions------------\\
+//------------functions------------\\
+//------------functions------------\\
+//------------functions------------\\
+//------------functions------------\\
+//------------functions------------\\
 
 function mqttConnect() {
   client = mqtt.connect("ws://test.mosquitto.org:8080");
 
   client.on("connect", () => {
     console.log("Connected to broker");
-    client.subscribe(subTopic, (err) => {
-      if (!err) {
-        client.publish(pubTopic, "Hello from local MQTT.js");
-      }
-    });
+    getInfo();
   });
   client.on("message", (topic, message) => {
+    unsuccessfulTries = 0;
     sysInfoJson = message.toString();
     console.log("Received message:", sysInfoJson);
+    sysInfoJson = sysInfoJson.substring(sysInfoJson.indexOf("{"));
 
-    // update ui if info came
-    // if (sysInfoJson.indexOf("info") != -1) {
     updateUI();
-    // }
   });
 }
+
+function getInfo() {
+  // add one to unsuccessful tries
+  unsuccessfulTries++;
+
+  //mqtt publish
+  console.log("getting info try number: " + unsuccessfulTries);
+  client.subscribe(subTopic, (err) => {
+    if (!err) {
+      client.publish(pubTopic, "give info");
+      console.log("send data: give info");
+    }
+  });
+
+  // if couldn't connect to mqtt after 15 tries
+  if (unsuccessfulTries >= 2) {
+    notConnected();
+  }
+}
+
+function notConnected() {
+  console.log("couldn't connect");
+  unsuccessfulTries = 0;
+  // alert("سیستم بعد از 15 تلاش موفق به اتصال نشد");
+
+  //change conStatus to connecting
+  document.getElementById("conStatus").textContent = "در حال اتصال...";
+  document.getElementById("conStatus").style.marginRight = "0px";
+  document
+    .getElementsByClassName("ring-container")[0]
+    .classList.add("displayNone");
+
+  //show disConPic
+  document.getElementById("disConDiv").classList.remove("displayNone");
+  document.getElementById("disConDiv").style.display = "flex";
+}
+
 function updateUI() {
-  //decode json
-  // sysInfoJson = sysInfoJson.substring(sysInfoJson.indexOf("info") + 4);
+  //hide disConPic
+  document.getElementById("disConDiv").classList.add("displayNone");
+  document.getElementById("disConDiv").style.display = "none";
+
   sysInfo = JSON.parse(sysInfoJson);
 
   //update connection status
@@ -152,7 +197,7 @@ function valveIsClose() {
 
 function updateAutoIrrEn() {
   updateAutoIrrSec = false;
-  if (sysInfo.autoIrrigationEn) {
+  if (sysInfo.autoIrrEn) {
     // update H3
     document.getElementById("autoIrrEn").textContent = "آبیاری خودکار فعال است";
     document.getElementById("autoIrrEn").classList.remove("redH3");
@@ -167,7 +212,7 @@ function updateAutoIrrEn() {
     document.getElementById("autoIrrButton").classList.add("redButton");
 
     // calculate next irr
-    var nextIrrTS = sysInfo.lastIrrigationTS + sysInfo.howOften * 24 * 60 * 60;
+    var nextIrrTS = sysInfo.lastIrrTS + sysInfo.howOften * 24 * 60 * 60;
     var options = { year: "numeric", month: "numeric", day: "numeric" };
     var date = new Date(nextIrrTS * 1000).toLocaleDateString("fa-IR", options);
 
@@ -254,51 +299,26 @@ function updateAutoIrrEn() {
   }
 }
 
-
 function vlvBtnClick() {
-  // check if valve is open
+  // release duration update En
+  updateDurationEn = true;
 
+  // check if valve is open
   if (sysInfo.valve) {
-    console.log("Closing the valve");
     client.subscribe(subTopic, (err) => {
       if (!err) {
-        client.publish(pubTopic, "close valve");
+        client.publish(pubTopic, "valve close");
+        console.log("sent data: close valve0");
       }
     });
-
-    // update button css
-    document.getElementById("valveButton").classList.remove("redButton");
-    document.getElementById("valveButton").classList.add("loadingButton");
-    document.getElementById("valveButton").textContent = "در حال ارسال...";
-
-    // release duration update En
-    updateDurationEn = true;
-
-
-    // be in loop until the response comes
-    while (1) {
-      client.on("message", (topic, message) => {
-        sysInfoJson = message.toString();
-        console.log("Received message:", sysInfoJson);
-      });
-      // listen for response
-      if (sysInfoJson.indexOf("valve is close") != -1) {
-        // updateUI();
-        break;
-      }
-    }
-  }
-
-  else {
-
+  } else {
     // create a json to send
     var cmd = {};
     var hour = document.getElementById("durationHour").value;
     var min = document.getElementById("durationMin").value;
-    var irrDuration = (Number(hour) * 60) + Number(min);
-    cmd.valve = 1;
+    var irrDuration = Number(hour) * 60 + Number(min);
     cmd.duration = irrDuration;
-    vlvOpenCmd = "valve open" + JSON.stringify(cmd);
+    vlvOpenCmd = "valve open, info" + JSON.stringify(cmd);
 
     console.log(vlvOpenCmd);
 
@@ -306,82 +326,64 @@ function vlvBtnClick() {
     client.subscribe(subTopic, (err) => {
       if (!err) {
         client.publish(pubTopic, vlvOpenCmd);
+        console.log("data sent: " + vlvOpenCmd);
       }
     });
-
-    // update button css
-    document.getElementById("valveButton").classList.remove("greenButton");
-    document.getElementById("valveButton").classList.add("loadingButton");
-    document.getElementById("valveButton").textContent = "در حال ارسال...";
-
-    // release duration update En
-    updateDurationEn = true;
-
-    // be in loop until the response comes
-    while (1) {
-      client.on("message", (topic, message) => {
-        sysInfoJson = message.toString();
-        console.log("Received message:", sysInfoJson);
-      });
-      // listen for response
-      if (sysInfoJson.indexOf("valve is open") != -1) {
-        // updateUI();
-        break;
-      }
-    }
   }
+
+  // update button css
+  document.getElementById("valveButton").classList.remove("greenButton");
+  document.getElementById("valveButton").classList.remove("redButton");
+  document.getElementById("valveButton").classList.add("loadingButton");
+  document.getElementById("valveButton").textContent = "در حال ارسال...";
 }
 
 function autoIrrBtnClick() {
+  // release auto irr section to be updated
+  updateAutoIrrSec = true;
 
-  if (sysInfo.autoIrrigationEn) {
-
-
-  }
-
-  else {
+  //check if auto irr was enable or not
+  if (sysInfo.autoIrrEn) {
+    // publish open cmd
+    client.subscribe(subTopic, (err) => {
+      if (!err) {
+        client.publish(pubTopic, "autoIrrigationOff");
+        console.log("data sent: " + "autoIrrigationOff");
+      }
+    });
+  } else {
     // create command json
     var cmd = {};
     var hour = document.getElementById("AIdurationHour").value;
     var min = document.getElementById("AIdurationMin").value;
     var irrHowOften = document.getElementById("howOften").value;
-    var AImin = document.getElementById("min").value;
+    var AImin = document.getElementById("minute").value;
     var AIhour = document.getElementById("hour").value;
-    var irrDuration = (Number(hour) * 60) + Numner(min);
-    cmd.autoIrrigationEn = 1;
+    var irrDuration = Number(hour) * 60 + Number(min);
+    cmd.autoIrrEn = 1;
     cmd.duration = irrDuration;
     cmd.min = AImin;
     cmd.hour = AIhour;
     cmd.howOften = irrHowOften;
 
-    var updInfoJson = "enable autoIrrigation" + JSON.stringify(cmd);
+    var updInfoJson = "autoIrrigationOn, info" + JSON.stringify(cmd);
 
     // publish open cmd
     client.subscribe(subTopic, (err) => {
       if (!err) {
         client.publish(pubTopic, updInfoJson);
+        console.log("data sent: " + updInfoJson);
       }
     });
   }
 
   //update button
   document.getElementById("autoIrrButton").classList.remove("greenButton");
+  document.getElementById("autoIrrButton").classList.remove("redButton");
   document.getElementById("autoIrrButton").classList.add("loadingButton");
   document.getElementById("autoIrrButton").textContent = "در حال ارسال...";
 
-
-  //wait untill response comes
-  while (true) {
-    client.on("message", (topic, message) => {
-      sysInfoJson = message.toString();
-      console.log("Received message:", sysInfoJson);
-    });
-    // listen for response
-    if (sysInfoJson.indexOf("autoIrrigation is enable") != -1) {
-      // updateUI();
-      break;
-    }
-  }
+  // waitForResponse();
 }
 
-function saveBtnClick() { }
+function saveBtnClick() {}
