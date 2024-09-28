@@ -2,9 +2,9 @@ messaged from client:
 1 - open valve    : "valve open, info{json(duration,valve)}"
 2 - close valve   : "valve close"
 3 - give info     : "give info"
-3 - autoIrrON     : "autoIrrigationOn, info{json(autoIrrigationEn,howOften,duration,hour,min)}"
+3 - autoIrrON     : "autoIrrigationOn, info{json(autoIrrEn,howOften,duration,hour,min)}"
 4 - autoIrrOff    : "autoIrrigationOff"
-5 - autoIrrUpdate : "autoIrrigationUpdate, info{json(autoIrrigationEn,howOften,duration,hour,min)}"
+5 - autoIrrUpdate : "autoIrrigationUpdate, info{json(autoIrrEn,howOften,duration,hour,min)}"
 
 
 messaged from ESP:
