@@ -24,7 +24,7 @@ function createTable() {
     html += "<td>" + tableData[i].farsiDay + "</td>";
     html += "<td>" + tableData[i].date + "</td>";
     html += "<td>" + tableData[i].time + "</td>";
-    html += "<td>" + tableData[i].watering_time + " دقیقه" + "</td>";
+    html += "<td>" + tableData[i].duration + "</td>";
 
     html += "</tr>";
   }
