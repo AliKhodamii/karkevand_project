@@ -921,8 +921,6 @@ void humidityRead()
     }
     humidity = humidity / 10;
 
-    Serial.print("unscaled humidity: ");
-    Serial.println(humidity);
     // scaling
     float shib = -100.0 / (humLoLi - humHiLi);
     float result = shib * (humidity - humHiLi) + 100;

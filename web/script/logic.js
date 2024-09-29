@@ -28,7 +28,7 @@ var t = setInterval(getInfo, 5000);
 
 function mqttConnect() {
   // connection parameters
-  const brokerUrl = "mqtt://test.mosquitto.org:8081"; // Public test broker
+  const brokerUrl = "mqtt://test.mosquitto.org:8080"; // Public test broker
   const options = {
     clientId: "web", // Client ID (optional)
     keepalive: 60,
