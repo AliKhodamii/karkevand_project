@@ -88,6 +88,7 @@ void putToEEPROM();
 void blink();
 void humidityRead();
 void sysRestart();
+bool insertRec();
 //-----------------------------------
 
 // declare json handler
@@ -723,6 +724,7 @@ bool valveOpen()
     lastIrrTS = rtcTimeDate();
     putToEEPROM();
     createNextIrrTimeStamp();
+    // insertRec();
     return 1;
 }
 bool valveClose()
@@ -942,4 +944,89 @@ void sysRestart()
     digitalWrite(sim800ResetPin, 1);
     delay(100);
     ESP.restart();
+}
+
+bool insertRec()
+{
+    Serial.println("inserting new irr record to db");
+    // check modem signal quality
+    int signalQuality = modem.getSignalQuality();
+    SerialMon.print("Signal quality: ");
+    SerialMon.println(signalQuality);
+
+    // check if modem is connected to network
+    if (modem.isNetworkConnected())
+    {
+        // check if modem gprs is connected
+        if (modem.isGprsConnected())
+        {
+            // connect to server
+            if (!httpClient.connected())
+            {
+                SerialMon.println("Connecting to server...");
+                if (!httpClient.connect("sed-smarthome.ir", 80))
+                { // Replace with your server address
+                    SerialMon.println(" fail");
+                    return false;
+                }
+                SerialMon.println(" success");
+            }
+
+            String sendData = "insertIntoDB={\"duration\" : " + String(duration) + "}";
+
+            // Set the request headers
+            http.beginRequest();
+            http.post("/karkevand/php/insertToDb.php");
+            http.sendHeader("Content-Type", "application/x-www-form-urlencoded");
+            http.sendHeader("Content-Length");
+            // http.sendHeader("X-Custom-Header", "custom-header-value");
+            http.beginBody();
+            http.print(sendData);
+            http.endRequest();
+            SerialMon.println("POST request sent");
+
+            // Read the response
+            int statusCode = http.responseStatusCode();
+            String response = http.responseBody();
+
+            SerialMon.print("Status code: ");
+            SerialMon.println(statusCode);
+            SerialMon.print("Response: ");
+            SerialMon.println(response);
+            // Close the connection
+            http.stop();
+            SerialMon.println("Server disconnected");
+
+            if (statusCode == 200)
+                return true;
+            else
+                return false;
+        }
+        else
+        {
+            SerialMon.println("modem GPRS is not connected");
+
+            // try 2 time to connect modem GPRS
+            for (int i = 1; i <= 2; i++)
+            {
+                SerialMon.print("trying to connect modem GPRS, try number: ");
+                SerialMon.println(i);
+                // Connect to the GPRS network
+                SerialMon.print("Connecting to the network...");
+                if (modem.gprsConnect(apn, user, pass))
+                {
+                    SerialMon.println(" success");
+                    break;
+                }
+                SerialMon.println(" fail");
+                SerialMon.println("unable to connect modem GPRS");
+            }
+        }
+    }
+    else
+    {
+        SerialMon.println("modem network is not connected");
+        return false;
+    }
+    return false;
 }
