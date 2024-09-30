@@ -1,16 +1,15 @@
 <?php
 date_default_timezone_set('Asia/Tehran');
 
-// if($_POST["insertIntoDB"] != null){
+if($_POST["insertIntoDB"] != null){
 
     //get duration from ESP data
-    // $infoJson = $_POST["insterIntoDB"];
-    $infoJson = "{\"duration\" : 65}";
+    $infoJson = $_POST["insterIntoDB"];
     $info = json_decode($infoJson);
     
     //create date of irr
     $dateTime = date('Y-m-d H:i:s');
-    $duration = $info->duration;
+    $duration = (int) $info->duration;
 
     $hour = floor($duration/60);
     $min = $duration%60;
@@ -50,4 +49,4 @@ date_default_timezone_set('Asia/Tehran');
     // Close the database connection
     $conn->close();
 
-// }
+}
