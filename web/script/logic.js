@@ -50,8 +50,12 @@ function mqttConnect() {
     unsuccessfulTries = 0;
     sysInfoJson = message.toString();
     console.log("Received message:", sysInfoJson);
-    var bracketIndex = sysInfoJson.indexOf("{");
 
+    //insert new irr rec to db if valve open response came
+    if (sysInfoJson.indexOf("valve is open") != -1) {
+      insertIntoDB();
+    }
+    var bracketIndex = sysInfoJson.indexOf("{");
     if (bracketIndex != -1) {
       sysInfoJson = sysInfoJson.substring(bracketIndex);
       updateUI();
@@ -437,4 +441,22 @@ function saveBtnClick() {
   document.getElementById("autoIrrSave").classList.remove("redButton");
   document.getElementById("autoIrrSave").classList.add("loadingButton");
   document.getElementById("autoIrrSave").textContent = "در حال ارسال...";
+}
+
+function insertIntoDB() {
+  var bracketIndex = sysInfoJson.indexOf("{");
+  if (bracketIndex != -1) {
+    sysInfoJson = sysInfoJson.substring(bracketIndex);
+    sysInfo = JSON.parse(sysInfoJson);
+  }
+  var sendData = { duration: sysInfo.duration };
+  var sendDataJson = JSON.stringify(sendData);
+  console.log(sendDataJson);
+  fetch("http://sed-smarthome.ir/karkevand/php/insertToDb.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "insertIntoDB=" + sendDataJson,
+  }).then((res) => {
+    console.log("Request complete! response:", res);
+  });
 }
