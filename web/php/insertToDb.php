@@ -1,30 +1,20 @@
 <?php
 date_default_timezone_set('Asia/Tehran');
 
-<<<<<<<<< Temporary merge branch 1
-=========
 file_put_contents("debug.txt" , $_POST["insertIntoDB"]);
-
->>>>>>>>> Temporary merge branch 2
 if($_POST["insertIntoDB"] != null){
 
     //get duration from ESP data
     $infoJson = $_POST["insertIntoDB"];
-<<<<<<<<< Temporary merge branch 1
-=========
     //$infoJson = "{\"duration\" : 62}";
->>>>>>>>> Temporary merge branch 2
     $info = json_decode($infoJson);
-    
+
     //create date of irr
     $dateTime = date('Y-m-d H:i:s');
     $duration = $info->duration;
 
     $hour = floor($duration/60);
     $min = $duration%60;
-
-    if ($min < 10) $min = "0".$min;
-    if ($min < 10) $hour = "0".$hour;
 
     $durTime = $hour . ":" . $min;
 
@@ -56,5 +46,4 @@ if($_POST["insertIntoDB"] != null){
 
     // Close the database connection
     $conn->close();
-
 }
