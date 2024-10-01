@@ -1,10 +1,19 @@
 <?php
 date_default_timezone_set('Asia/Tehran');
 
+<<<<<<< HEAD
+=======
+file_put_contents("debug.txt" , $_POST["insertIntoDB"]);
+
+>>>>>>> 54a43b0c319da182119ff8397d2796b83ecd95a7
 if($_POST["insertIntoDB"] != null){
 
     //get duration from ESP data
     $infoJson = $_POST["insertIntoDB"];
+<<<<<<< HEAD
+=======
+    //$infoJson = "{\"duration\" : 62}";
+>>>>>>> 54a43b0c319da182119ff8397d2796b83ecd95a7
     $info = json_decode($infoJson);
     
     //create date of irr
@@ -19,7 +28,6 @@ if($_POST["insertIntoDB"] != null){
 
     $durTime = $hour . ":" . $min;
 
-    
     //connect to db
     $hostname = 'localhost:3306';
     $username = 'jjqioyps_karSSG_db_user';
