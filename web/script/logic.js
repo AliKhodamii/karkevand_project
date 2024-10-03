@@ -3,6 +3,7 @@ var pubTopic = "karSSG/client";
 var sysInfoJson = "";
 var updateAutoIrrSec = true;
 var updateDurationEn = true;
+var waitingForResponse = false;
 var unsuccessfulTries = 0;
 
 var sysInfo;
@@ -28,7 +29,7 @@ var t = setInterval(getInfo, 5000);
 
 function mqttConnect() {
   // connection parameters
-  const brokerUrl = "mqtt://test.mosquitto.org:8080"; // Public test broker
+  const brokerUrl = "mqtt://test.mosquitto.org:8081"; // Public test broker
   const options = {
     clientId: "web", // Client ID (optional)
     keepalive: 60,
@@ -52,11 +53,39 @@ function mqttConnect() {
     console.log("Received message:", sysInfoJson);
 
     //insert new irr rec to db if valve open response came
-    if (sysInfoJson.indexOf("valve is open") != -1) {
-      insertIntoDB();
-    }
     var bracketIndex = sysInfoJson.indexOf("{");
-    if (bracketIndex != -1) {
+
+    if (bracketIndex != -1 && !waitingForResponse) {
+      sysInfoJson = sysInfoJson.substring(bracketIndex);
+      updateUI();
+    }
+    if (sysInfoJson.indexOf("valve is open") != -1 && waitingForResponse) {
+      waitingForResponse = false;
+      // insertIntoDB();
+      sysInfoJson = sysInfoJson.substring(bracketIndex);
+      updateUI();
+    }
+    if (sysInfoJson.indexOf("valve is close") != -1 && waitingForResponse) {
+      waitingForResponse = false;
+      // insertIntoDB();
+      sysInfoJson = sysInfoJson.substring(bracketIndex);
+      updateUI();
+    }
+    if (sysInfoJson.indexOf("autoIrr is on") != -1 && waitingForResponse) {
+      waitingForResponse = false;
+      // insertIntoDB();
+      sysInfoJson = sysInfoJson.substring(bracketIndex);
+      updateUI();
+    }
+    if (sysInfoJson.indexOf("autoIrr is off") != -1 && waitingForResponse) {
+      waitingForResponse = false;
+      // insertIntoDB();
+      sysInfoJson = sysInfoJson.substring(bracketIndex);
+      updateUI();
+    }
+    if (sysInfoJson.indexOf("autoIrr updated") != -1 && waitingForResponse) {
+      waitingForResponse = false;
+      // insertIntoDB();
       sysInfoJson = sysInfoJson.substring(bracketIndex);
       updateUI();
     }
@@ -325,6 +354,8 @@ function updateAutoIrrEn() {
 function vlvBtnClick() {
   // release duration update En
   updateDurationEn = true;
+  //wait for valve open response
+  waitingForResponse = true;
 
   // check if valve is open
   if (sysInfo.valve) {
@@ -364,7 +395,8 @@ function vlvBtnClick() {
 function autoIrrBtnClick() {
   // release auto irr section to be updated
   updateAutoIrrSec = true;
-
+  //wait for valve open response
+  waitingForResponse = true;
   //check if auto irr was enable or not
   if (sysInfo.autoIrrEn) {
     // publish open cmd
@@ -412,6 +444,8 @@ function autoIrrBtnClick() {
 function saveBtnClick() {
   // release auto irr section to be updated
   updateAutoIrrSec = true;
+  //wait for valve open response
+  waitingForResponse = true;
 
   // create command json
   var cmd = {};
