@@ -1,21 +1,12 @@
 @font-face {
   font-family: yekan;
-  src: url(./fonts/Yekan.ttf);
+  src: url(../fonts/Yekan.ttf);
 }
 * {
   direction: rtl;
   font-family: yekan;
 }
-body {
-  height: 100vh;
-  /* margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background-color: #f0f0f0; */
-}
+
 h3 {
   border-bottom: #155f82 1px solid;
   width: fit-content;
@@ -42,7 +33,7 @@ img {
   margin: auto;
   width: 360px;
   background-color: #155f82;
-  padding: 10px 10px 0px 10px;
+  padding: 10px 10px 10px 10px;
   border-radius: 8px;
 }
 .row {
