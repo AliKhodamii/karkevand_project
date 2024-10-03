@@ -652,6 +652,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
     {
         dataPrepare();
         sendMessage = "info" + sysInfoJson;
+        Serial.print("publishing message to broker, message: ");
         Serial.println(sendMessage.c_str());
         mqtt.publish(topicInit, sendMessage.c_str());
     }
