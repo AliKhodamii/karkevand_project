@@ -119,13 +119,13 @@ const int port = 1883; // MQTT port
 // Topics for publishing/subscribing
 const char *topicInit = "karSSG/ESP";
 const char *topicLed = "karSSG/client";
+
 //-------------------------------------------
 // init modem and httpClient and mqttClient
 TinyGsm modem(SerialAT);
-TinyGsmClient httpClient(modem);
-TinyGsmClient mqttClient(modem);
-HttpClient http(httpClient, serverPath, 80); // Replace with your server address
-PubSubClient mqtt(mqttClient);
+TinyGsmClient client(modem);
+HttpClient http(client, "sed-smarthome.ir", 80); // Replace with your server address
+PubSubClient mqtt(client);
 //------------------------------------------
 
 void setup()
@@ -420,10 +420,10 @@ bool gsmPost()
             SerialMon.println("modem GPRS is connected");
 
             // connect to server
-            if (!httpClient.connected())
+            if (!client.connected())
             {
                 SerialMon.println("Connecting to server...");
-                if (!httpClient.connect(serverPath, 80))
+                if (!client.connect(serverPath, 80))
                 { // Replace with your server address
                     SerialMon.println(" fail");
                     return false;
@@ -495,13 +495,14 @@ bool gsmPost()
     }
     return false;
 }
+
 bool gsmGet()
 {
     SerialMon.println("get request...");
-    if (!httpClient.connected())
+    if (!client.connected())
     {
         SerialMon.println("Connecting to server...");
-        if (!httpClient.connect(serverPath, 80))
+        if (!client.connect(serverPath, 80))
         { // Replace with your server address
             SerialMon.println(" fail");
             delay(10000);
@@ -724,7 +725,7 @@ bool valveOpen()
     lastIrrTS = rtcTimeDate();
     putToEEPROM();
     createNextIrrTimeStamp();
-    // insertRec();
+    insertRec();
     return 1;
 }
 bool valveClose()
@@ -948,7 +949,12 @@ void sysRestart()
 
 bool insertRec()
 {
-    Serial.println("inserting new irr record to db");
+    /*
+    1- disconnect mqttClient
+    2- perform post req
+    3- disconnect httpClient
+    4- connect mqtt client again
+    */
     // check modem signal quality
     int signalQuality = modem.getSignalQuality();
     SerialMon.print("Signal quality: ");
@@ -960,30 +966,21 @@ bool insertRec()
         // check if modem gprs is connected
         if (modem.isGprsConnected())
         {
-            // connect to server
-            if (!httpClient.connected())
-            {
-                SerialMon.println("Connecting to server...");
-                if (!httpClient.connect("sed-smarthome.ir", 80))
-                { // Replace with your server address
-                    SerialMon.println(" fail");
-                    return false;
-                }
-                SerialMon.println(" success");
-            }
 
+            // disconnect mqtt to connect http and send post req
+            mqtt.disconnect();
+
+            // post request data
             String sendData = "insertIntoDB={\"duration\" : " + String(duration) + "}";
+            String path = "/karkevand/php/insertToDb.php";
+            String conType = "application/x-www-form-urlencoded";
+
+            Serial.println("inserting new irr record to db");
+
+            Serial.println("sendData: " + sendData);
 
             // Set the request headers
-            http.beginRequest();
-            http.post("/karkevand/php/insertToDb.php");
-            http.sendHeader("Content-Type", "application/x-www-form-urlencoded");
-            http.sendHeader("Content-Length");
-            // http.sendHeader("X-Custom-Header", "custom-header-value");
-            http.beginBody();
-            http.print(sendData);
-            http.endRequest();
-            SerialMon.println("POST request sent");
+            http.post(path, conType, sendData);
 
             // Read the response
             int statusCode = http.responseStatusCode();
@@ -996,6 +993,22 @@ bool insertRec()
             // Close the connection
             http.stop();
             SerialMon.println("Server disconnected");
+
+            // Reconnect to MQTT after HTTP POST
+            Serial.print("reconnect to mqtt...");
+            while (!mqtt.connected())
+            {
+                if (!mqttConnect())
+                {
+                    Serial.println(" failed! retry in 1 sec...");
+                    delay(1000);
+                }
+                else
+                {
+                    Serial.println(" succeed!");
+                    mqtt.subscribe(topicLed);
+                }
+            }
 
             if (statusCode == 200)
                 return true;
