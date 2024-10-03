@@ -1,0 +1,255 @@
+@font-face {
+  font-family: yekan;
+  src: url(./fonts/Yekan.ttf);
+}
+* {
+  direction: rtl;
+  font-family: yekan;
+}
+body {
+  height: 100vh;
+  /* margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0; */
+}
+h3 {
+  border-bottom: #155f82 1px solid;
+  width: fit-content;
+  margin: auto;
+}
+
+input {
+  text-align: center;
+  width: 2.8vh;
+  height: 2.6vh;
+  font-size: 2vh;
+  border-radius: 0.3vh;
+}
+img {
+  width: 2.5vh;
+  display: inline-block;
+  vertical-align: middle;
+}
+.textCenter {
+  text-align: center;
+}
+.mainContainer {
+  height: 100%;
+  margin: auto;
+  width: 360px;
+  background-color: #155f82;
+  padding: 10px 10px 0px 10px;
+  border-radius: 8px;
+}
+.row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.square {
+  height: fit-content;
+  background-color: #fffca8;
+  margin-bottom: 10px;
+  padding: 5px;
+  border: 2.5px black solid;
+  border-radius: 10px;
+}
+.connectionDiv {
+  padding: 1.5vh 0 1.5vh 0;
+}
+.humidityDiv {
+}
+.valveDiv {
+}
+.autoIrrDiv {
+}
+.recentIrrDiv {
+}
+table {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border-spacing: 0;
+}
+table tr td {
+  /* border: 1px solid black; */
+  padding: 0;
+}
+.humidityTable tr td {
+  width: 50%;
+}
+.buttonDiv {
+  text-align: center;
+}
+Button {
+  width: 15vh;
+  height: 4.5vh;
+  margin: 1vh 0 1vh 0;
+  border-radius: 1vh;
+  font-size: 2vh;
+  border: 2px solid #155f82;
+}
+.autoIrrTable tr td:nth-child(2) {
+  text-align: center;
+}
+.autoIrrTable tr {
+  height: 5vh;
+}
+.autoIrrTable tr:nth-child(n + 3):nth-child(-n + 6) {
+  border-bottom: 1px #155f82 solid;
+}
+.autoIrrTable tr:first-child {
+  text-align: center;
+}
+.autoIrrTable {
+  border-collapse: collapse;
+}
+.greenButton {
+  background: #196b24;
+  color: white;
+}
+.redButton {
+  background: #e97132;
+  color: white;
+}
+.loadingButton {
+  background: gray;
+}
+.saveButton {
+  background: #0f9ed5;
+  color: white;
+}
+
+.ring-container {
+  position: relative;
+}
+
+.onlineCircle {
+  width: 15px;
+  height: 15px;
+  background-color: #196b24;
+  border-radius: 50%;
+  position: absolute;
+  top: 5px;
+  right: 10px;
+}
+.offlineCircle {
+  width: 15px;
+  height: 15px;
+  background-color: #e97132;
+  border-radius: 50%;
+  position: absolute;
+  top: 5px;
+  right: 10px;
+}
+
+.ringring {
+  border: 3px solid #196b24;
+  -webkit-border-radius: 30px;
+  height: 25px;
+  width: 25px;
+  position: absolute;
+  right: 2px;
+  top: -3px;
+  -webkit-animation: pulsate 1s ease-out;
+  -webkit-animation-iteration-count: infinite;
+  opacity: 0;
+}
+@-webkit-keyframes pulsate {
+  0% {
+    -webkit-transform: scale(0.1, 0.1);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    -webkit-transform: scale(1.2, 1.2);
+    opacity: 0;
+  }
+}
+
+.humidityPic {
+  height: 5vh;
+  width: 5vh;
+}
+#humidityPercent {
+  font-size: 25px;
+}
+.redH3 {
+  color: #e97132;
+}
+.greenH3 {
+  color: #196b24;
+}
+
+#valveStatus {
+}
+.displayNone {
+  display: none;
+}
+#disConDiv {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(
+    0,
+    0,
+    0,
+    0.5
+  ); /* Optional semi-transparent background */
+  z-index: 9999; /* Ensures the image is on top of everything */
+  text-align: center;
+  /* display: flex; */
+  justify-content: center;
+  align-items: center; /* Centers the image vertically and horizontally */
+  flex-direction: column;
+}
+#disConDiv h1 {
+  text-shadow: -1px 1px 0 #fff, 1px 1px 0 #fff, 1px -1px 0 #fff,
+    -1px -1px 0 #fff;
+}
+
+#disConImg {
+  margin-top: 10%; /* Adjust to center vertically */
+  max-width: 80%; /* Responsive sizing */
+  max-height: 80%;
+  width: 20vh;
+}
+
+.recordTable {
+  margin: auto;
+  margin-top: 15px;
+  border-collapse: collapse;
+  font-size: 12px;
+  direction: rtl;
+}
+.recordTable td {
+  width: 150px;
+  text-align: center;
+}
+.recordTable td,
+th {
+  border: 1px solid #b2b2b2;
+  text-align: center;
+  padding: 8px 4px;
+}
+.recordTable td:nth-child(1) {
+  background-color: #37474f;
+  color: white;
+  width: 80px;
+}
+
+.recordTable thead {
+  color: #fff;
+  background-color: #37474f;
+}
+.recordTable tr:nth-child(even) {
+  background-color: #fff;
+}
