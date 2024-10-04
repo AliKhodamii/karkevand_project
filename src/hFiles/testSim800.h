@@ -20,7 +20,7 @@ const char pass[] = "";       // GPRS password, if any
 // MQTT settings
 const char *broker = "io.adafruit.com";
 const char *mqtt_username = "sedsmarthome";
-const char *mqtt_password = "adafruit pass word";
+const char *mqtt_password = "!!!!!!!!!!!!!!!!NOTHING!!!!!!!!!!!!";
 const char *mqtt_topic = "sedsmarthome/feeds/karssg-slash-client";
 
 TinyGsm modem(SerialAT);
