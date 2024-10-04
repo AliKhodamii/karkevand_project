@@ -17,21 +17,16 @@ const char apn[] = "rightel"; // Replace with your APN
 const char user[] = "";       // GPRS username, if any
 const char pass[] = "";       // GPRS password, if any
 
-// MQTT broker details-----------------------
-const char *broker = "test.mosquitto.org";
-const int port = 1883; // MQTT port
-
-// Topics for publishing/subscribing
-const char *topicInit = "karSSG/ESP";
-const char *topicLed = "karSSG/client";
+// MQTT settings
+const char *broker = "io.adafruit.com";
+const char *mqtt_username = "sedsmarthome";
+const char *mqtt_password = "adafruit pass word";
+const char *mqtt_topic = "sedsmarthome/feeds/karssg-slash-client";
 
 TinyGsm modem(SerialAT);
-
 TinyGsmClient client(modem);
 PubSubClient mqtt(client);
-HttpClient http(client, "sed-smarthome.ir", 80); // Replace with your server address
 
-void mqttCallback(char *topic, byte *payload, unsigned int length);
 bool mqttConnect();
 
 void setup()
@@ -81,9 +76,9 @@ void setup()
     }
 
     // MQTT broker setup
-    mqtt.setServer(broker, port);
+    mqtt.setServer(broker, 1883);
     mqtt.setKeepAlive(120);
-    mqtt.setCallback(mqttCallback);
+    // mqtt.setCallback(mqttCallback);
     while (!mqtt.connected())
     {
         // Attempt to connect to MQTT broker
@@ -91,94 +86,22 @@ void setup()
         if (mqttConnect())
         {
             SerialMon.println(" connected");
-            mqtt.publish(topicInit, "GsmClientTest started");
-            mqtt.subscribe(topicLed);
+            if (mqtt.publish(mqtt_topic, "GsmClientTest started"))
+            {
+                Serial.println("publish good!");
+            }
+            else
+            {
+                Serial.println("publish bad!");
+            }
         }
         else
         {
             SerialMon.println(" connection failed, retry in 1 sec...");
+            Serial.print(mqtt.state());
             delay(1000);
         }
     }
-    delay(2000);
-    String postData = "insertIntoDB={\"duration\" : 87}";
-    String path = "/karkevand/php/insertToDb.php";
-    String conType = "application/x-www-form-urlencoded";
-
-
-    mqtt.disconnect();
-
-    http.post(path,conType,postData);
-
-
-    // Read the server's response
-    int statusCode = http.responseStatusCode();
-    String responseBody = http.responseBody();
-    Serial.print("HTTP Status Code: ");
-    Serial.println(statusCode);
-    Serial.println("Response Body: ");
-    Serial.println(responseBody);
-
-    // Close HTTP connection
-    http.stop();
-
-    delay(1000);
-
-    // Reconnect to MQTT after HTTP POST
-     Serial.print("reconnect to mqtt...");
-            if (!mqttConnect())
-            {
-                Serial.println(" failed! retry in 1 sec...");
-            }
-            else
-            {
-                Serial.println(" succeed!");
-            }
-    // mqtt.disconnect();
-
-    // Serial.println("connecting to server for post request");
-
-    // if (client.connect("sed-smarthome.ir", 80))
-    // {
-    //     Serial.println("connection success!");
-    // }
-    // else
-    // {
-    //     Serial.println("connection fail!");
-    // }
-
-    // Serial.println("post request start...");
-
-    // client.println("POST /karkevand/php/insertToDb.php HTTP/1.1");
-    // client.println("Host : sed-smarthome.ir");
-    // client.println("Content-Type: application/x-www-form-urlencoded");
-    // client.println("Connection: close");
-    // client.print("Content-Length: ");
-    // client.println(postData.length());
-    // client.println();
-    // client.println(postData);
-
-    // while (client.connected() || client.available())
-    // {
-    //     if (client.available())
-    //     {
-    //         String line = client.readStringUntil('\n');
-    //         Serial.println(line);
-    //     }
-    // }
-    // client.stop();
-
-    // // Read the response
-    // int statusCode = http.responseStatusCode();
-    // String response = http.responseBody();
-
-    // SerialMon.print("Status code: ");
-    // SerialMon.println(statusCode);
-    // SerialMon.print("Response: ");
-    // SerialMon.println(response);
-    // // Close the connection
-    // http.stop();
-    // SerialMon.println("Server disconnected");
 }
 
 void loop()
@@ -229,5 +152,5 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
 }
 bool mqttConnect()
 {
-    return mqtt.connect("karSSG"); // You can add MQTT username/password if required
+    return mqtt.connect("karSSG", mqtt_username, mqtt_password); // You can add MQTT username/password if required
 }
