@@ -1,5 +1,7 @@
-var subTopic = "karSSG/ESP";
-var pubTopic = "karSSG/client";
+// var subTopic = "karSSG/ESP";
+var subTopic = "sedsmarthome/feeds/karssg.esp";
+// var pubTopic = "karSSG/client";
+var pubTopic = "sedsmarthome/feeds/karssg.client";
 var sysInfoJson = "";
 var updateAutoIrrSec = true;
 var updateDurationEn = true;
@@ -29,9 +31,14 @@ var t = setInterval(getInfo, 5000);
 
 function mqttConnect() {
   // connection parameters
-  const brokerUrl = "mqtt://test.mosquitto.org:8081"; // Public test broker
+  const brokerUrl = "mqtt://test.mosquitto.org"; // Public test broker
   const options = {
-    clientId: "web", // Client ID (optional)
+    // username: username,
+    // password: aioKey,
+    // port: 443,
+    // port: 31766,
+    port: 8081,
+    clientId: "web123", // Client ID (optional)
     keepalive: 60,
     reconnectPeriod: 1000, // Reconnect after 1 second if disconnected
   };
@@ -189,7 +196,7 @@ function updateHumidity() {
     sysInfo.humidity + "%";
 }
 function updateDuration() {
-  doUpdateDuration = false;
+  updateDurationEn = false;
   var m = 0;
   var h = 0;
   h = Math.floor(sysInfo.duration / 60);
@@ -409,15 +416,19 @@ function autoIrrBtnClick() {
   } else {
     // create command json
     var cmd = {};
-    var hour = document.getElementById("AIdurationHour").value;
-    var min = document.getElementById("AIdurationMin").value;
-    var irrHowOften = document.getElementById("howOften").value;
-    var AImin = document.getElementById("minute").value;
-    var AIhour = document.getElementById("hour").value;
-    var irrDuration = Number(hour) * 60 + Number(min);
+    var AIhour = sysInfo.hour;
+    var AImin = sysInfo.min;
+    var irrHowOften = sysInfo.howOften;
+    var irrDuration = sysInfo.duration;
+    // var hour = document.getElementById("AIdurationHour").value;
+    // var min = document.getElementById("AIdurationMin").value;
+    // var irrHowOften = document.getElementById("howOften").value;
+    // var AImin = document.getElementById("minute").value;
+    // var AIhour = document.getElementById("hour").value;
+    // var irrDuration = Number(hour) * 60 + Number(min);
     cmd.autoIrrEn = 1;
     cmd.duration = irrDuration;
-    cmd.min = AImin;
+    cmd.minute = AImin;
     cmd.hour = AIhour;
     cmd.howOften = irrHowOften;
 
@@ -457,7 +468,7 @@ function saveBtnClick() {
   var irrDuration = Number(hour) * 60 + Number(min);
   cmd.autoIrrEn = sysInfo.autoIrrEn;
   cmd.duration = irrDuration;
-  cmd.min = AImin;
+  cmd.minute = AImin;
   cmd.hour = AIhour;
   cmd.howOften = irrHowOften;
 
