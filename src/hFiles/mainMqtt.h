@@ -114,11 +114,15 @@ const char pass[] = "";       // GPRS password, if any
 
 // MQTT broker details-----------------------
 const char *broker = "test.mosquitto.org";
+
 const int port = 1883; // MQTT port
+// const int port = 31766; // MQTT port
 
 // Topics for publishing/subscribing
-const char *topicInit = "karSSG/ESP";
-const char *topicLed = "karSSG/client";
+// const char *topicInit = "karSSG/ESP";
+const char *topicInit = "sedsmarthome/feeds/karssg.esp";
+// const char *topicLed = "karSSG/client";
+const char *topicLed = "sedsmarthome/feeds/karssg.client";
 
 //-------------------------------------------
 // init modem and httpClient and mqttClient
@@ -644,7 +648,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
         valveClose();
 
         dataPrepare();
-        sendMessage = "valve is closed, info" + sysInfoJson;
+        sendMessage = "valve is close, info" + sysInfoJson;
         Serial.println(sendMessage.c_str());
         mqtt.publish(topicInit, sendMessage.c_str());
     }
@@ -673,7 +677,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
         createNextIrrTimeStamp();
 
         dataPrepare();
-        sendMessage = "autoIrrigation is on, info" + sysInfoJson;
+        sendMessage = "autoIrr is on, info" + sysInfoJson;
         Serial.println(sendMessage.c_str());
         mqtt.publish(topicInit, sendMessage.c_str());
     }
