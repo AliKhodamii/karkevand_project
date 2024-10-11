@@ -2,8 +2,8 @@
 #define TINY_GSM_MODEM_SIM800  // Define the modem type as SIM800
 #define TINY_GSM_USE_GPRS true // We're using GPRS, not WiFi
 #define SerialMon Serial       // For debugging
-#define MODEM_RX D6            // RX pin of ESP8266 connected to TX pin of SIM800L
-#define MODEM_TX D7            // TX pin of ESP8266 connected to RX pin of SIM800L
+#define MODEM_RX D7            // RX pin of ESP8266 connected to TX pin of SIM800L
+#define MODEM_TX D6            // TX pin of ESP8266 connected to RX pin of SIM800L
 #define EEPROM_SIZE 4096
 // ---------------------------
 
@@ -57,7 +57,7 @@ int lastIrrMinute = 0;
 
 // pin initialize-------------
 // 1-valve 2,3-TX RX 4-LowHumidity 5-NormalHumidity 6-sim800reset 7-comPin 8-
-const int valvePin = D1;
+const int valvePin = D0;
 const int lowHumidityPin = D2;
 const int normalHumidityPin = D3;
 const int sim800ResetPin = D5;
