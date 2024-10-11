@@ -1,7 +1,10 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
-#include<PubSubClient.h>
+#include <PubSubClient.h>
+
+void callback(char* topic , byte* payload , unsigned int length);
+void connect();
 
 // Wi-Fi credentials
 const char *ssid = "TP_Sed";       // Replace with your Wi-Fi SSID
@@ -9,6 +12,14 @@ const char *password = "87654321"; // Replace with your Wi-Fi password
 
 // Server details
 const char *serverUrl = "http://sed-smarthome.ir/karkevand/php/insertToDb.php"; // Replace with your server URL
+
+WiFiClient client;
+PubSubClient mqtt(client);
+
+const char *broker = "test.mosquitto.org";
+const int port = 1883;
+const char *pubTopic = "sedSSG/ESP";
+const char *subTopic = "sedSSG/client";
 
 void setup()
 {
@@ -34,40 +45,9 @@ void setup()
     // Only attempt HTTP POST if connected to Wi-Fi
     if (WiFi.status() == WL_CONNECTED)
     {
-        HTTPClient http; // Create HTTP client object
-        WiFiClient client;
-        PubSubClient mqtt(client);
 
-        // Start connection and send HTTP POST request
-        Serial.println("Starting POST request...");
-        http.begin(client, serverUrl);                // Specify the destination for the HTTP request
-        http.addHeader("Content-Type", "application/x-www-form-urlencoded"); // Specify content-type header
-
-        // Data to send (in JSON format)
-        String postData = "insertIntoDB={\"duration\":66}";
-        Serial.println("postData: " + postData);
-
-        // Send the request and receive the response code
-        int httpResponseCode = http.POST(postData);
-
-        // Check for a valid response
-        if (httpResponseCode > 0)
-        {
-            String responseBody = http.getString(); // Get the response from the server
-            Serial.print("HTTP Response code: ");
-            Serial.println(httpResponseCode);
-            Serial.print("Response body: ");
-            Serial.println(responseBody);
-        }
-        else
-        {
-            // If an error occurred
-            Serial.print("Error on sending POST: ");
-            Serial.println(httpResponseCode);
-        }
-
-        // Close the connection
-        http.end();
+        mqtt.setServer(broker, port);
+        mqtt.setCallback(callback);
     }
     else
     {
@@ -77,5 +57,48 @@ void setup()
 
 void loop()
 {
-    // Nothing needed here for now
+    if (!mqtt.connected())
+    {
+        connect();
+    }
+    mqtt.loop();
+}
+
+void connect()
+{
+    while (!mqtt.connected())
+    {
+        Serial.print("Connecting to MQTT...");
+        String mqttClientId = "sedEsp";
+        if (mqtt.connect(mqttClientId.c_str()))
+        {
+            Serial.println(" success!");
+            mqtt.subscribe(subTopic);
+        }
+        else
+        {
+            Serial.print(" Fail! rc=");
+            Serial.println(mqtt.state());
+            delay(5000);
+        }
+    }
+}
+
+void callback(char *topic, byte *payload, unsigned int length)
+{
+    Serial.print("Message arrived with topic: ");
+    Serial.println(topic);
+    Serial.println("with payload :");
+    String message = "";
+    for (int i = 0; i < length; i++)
+    {
+        message += (char)payload[i];
+        Serial.print((char)payload[i]);
+    }
+    Serial.println();
+
+    if (message == "hi")
+    {
+        mqtt.publish(pubTopic, "hello");
+    }
 }
