@@ -57,11 +57,11 @@ int lastIrrMinute = 0;
 
 // pin initialize-------------
 // 1-valve 2,3-TX RX 4-LowHumidity 5-NormalHumidity 6-sim800reset 7-comPin 8-
-const int valvePin = D0;
+const int valvePin = D1;
 const int lowHumidityPin = D2;
 const int normalHumidityPin = D3;
 const int sim800ResetPin = D5;
-const int comPin = D8;
+const int comPin = D0;
 const int humidityPin = A0;
 // ---------------------------
 
