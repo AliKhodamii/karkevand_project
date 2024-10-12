@@ -146,7 +146,7 @@ void setup()
     pinMode(sim800ResetPin, OUTPUT);
     pinMode(comPin, OUTPUT);
 
-    pinMode(humidityPin, OUTPUT);
+    pinMode(humidityPin, INPUT);
 
     // pins initial values
     digitalWrite(valvePin, 0);
@@ -944,11 +944,16 @@ void humidityRead()
 }
 void sysRestart()
 {
-
+    digitalWrite(comPin,1);
+    Serial.print("System is gonna restart in 3");
+    delay(1000);
+    Serial.print(" 2");
+    delay(1000);
+    Serial.println(" 1");
     digitalWrite(sim800ResetPin, 0);
     delay(1000);
     digitalWrite(sim800ResetPin, 1);
-    delay(100);
+    delay(1000);
     ESP.restart();
 }
 
