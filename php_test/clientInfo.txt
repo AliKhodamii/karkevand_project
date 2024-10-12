@@ -1,0 +1,9 @@
+{
+    "valve" : false,
+    "duration" : 2,
+    "copy" : false,
+    "restart" : false,
+    "humidity" : false,
+    "humidityHighLimit" : 200,
+    "humidityLowLimit" : 300
+}
