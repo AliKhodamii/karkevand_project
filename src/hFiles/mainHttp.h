@@ -104,6 +104,7 @@ bool valveOpen();
 int rtcTimeDate();
 void putToEEPROM();
 int createNextIrrTimeStamp();
+bool valveClose();
 //-----------------------------------
 
 // declare json handler
@@ -156,7 +157,7 @@ void loop()
         if (!valve && valveCmd)
         {
             Serial.println("Valve Close cmd, closing valve...");
-            // valveOpen();
+            valveOpen();
         }
 
         // check for valve close cmd
@@ -187,9 +188,30 @@ void loop()
     }
 
     // check if it's autoIrr time every 3 sec
-    if (millis() - loop3sec > 3000)
+    if (millis() - loop3sec > 3000 && autoIrrEn)
     {
         loop3sec = millis();
+        int currentTimestamp = rtcTimeDate();
+        if ((currentTimestamp > nextIrrTS))
+        {
+            Serial.println("auto Irrigation will happen now...");
+            valveOpen();
+        }
+        else if ((currentTimestamp - lastIrrTS) > (howOften * 24 * 60 * 60))
+        {
+            Serial.println("irrigation day , not irrigation time yet");
+        }
+        else
+        {
+            Serial.println("it's not auto irrigation day");
+        }
+    }
+
+    // check copy time
+    if (millis() - copyTimer > 20)
+    {
+        copy = 0;
+        gsmPost(dataPrepareForSys(), sysPath);
     }
 }
 
@@ -692,3 +714,13 @@ bool insertRec()
     }
     return false;
 }
+bool valveClose()
+{
+    Serial.println("Valve Closing...");
+    valve = false;
+    copy = true;
+    copyTimer = millis();
+    digitalWrite(valvePin, valve);
+    gsmPost(dataPrepareForSys(), sysPath);
+    return 1;
+};
