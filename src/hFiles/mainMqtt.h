@@ -66,6 +66,8 @@ const int humidityPin = A0;
 // ---------------------------
 
 // function forward declaration------
+void netConnect();
+void gprsConnect();
 bool gsmPost();
 bool gsmGet();
 void dataUpdate();
@@ -172,66 +174,10 @@ void setup()
     // create next irrigation timestamp
     createNextIrrTimeStamp();
 
-    // if sim800 isn't registered we will wait
-    if (!modem.isNetworkConnected())
-    {
-        waitTime = millis();
-        while (!modem.isNetworkConnected())
-        {
-            // blink twice
-            blink();
-            blink();
-
-            // start modem (gsm module)
-            modem.restart();
-
-            // Print modem information
-            String modemInfo = modem.getModemInfo();
-            SerialMon.print("Modem Info: ");
-            SerialMon.println(modemInfo);
-            Serial.println("modem is not connected to network, waiting 5 seconds...");
-            delay(5000);
-
-            // if network didn't connect in 2 mins
-            if (millis() - waitTime > 120000)
-            {
-                sysRestart();
-            }
-        }
-    }
-    // check if modem is connected to network
-    if (modem.isNetworkConnected())
-    {
-        waitTime = millis();
-        SerialMon.println("modem  network is connected");
-        // Connect to the GPRS network
-        if (!modem.isGprsConnected())
-        {
-            while (!modem.gprsConnect(apn, user, pass))
-            {
-                // blink 3 times
-                blink();
-                blink();
-                blink();
-
-                SerialMon.print("Connecting to the GPRS...");
-                if (!modem.gprsConnect(apn, user, pass))
-                {
-                    SerialMon.println(" fail");
-                }
-                SerialMon.println(" success");
-                // if GPRS wasn't connected after 2 mins restart esp
-                if ((millis() - waitTime) > 120000)
-                {
-                    sysRestart();
-                }
-            }
-        }
-    }
-    else
-    {
-        SerialMon.println("modem network is not connected");
-    }
+    // check if network is connected
+    netConnect();
+    // check if modem is connected to GPRS
+    gprsConnect();
 
     // sync modem time with tehran time
     if (modem.NTPServerSync())
@@ -273,51 +219,9 @@ void loop()
 {
 
     // check if sim800 is connected to network
-    if (!modem.isNetworkConnected())
-    {
-        waitTime = millis();
-        while (!modem.isNetworkConnected())
-        {
-            // blink twice
-            blink();
-            blink();
-            SerialMon.println("modem is not connected to network");
-            delay(5000);
-
-            // if Network wasn't connected after 2 mins restart esp
-            if ((millis() - waitTime) > 120000)
-            {
-                sysRestart();
-            }
-        }
-    }
-
+    netConnect();
     // connect to GPRS if we're not
-    if (modem.isNetworkConnected() && !modem.isGprsConnected())
-    {
-        waitTime = millis();
-        while (modem.isNetworkConnected() && !modem.isGprsConnected())
-        {
-            // blink 3 times
-            blink();
-            blink();
-            blink();
-
-            SerialMon.println("modem is not connected to GPRS");
-            SerialMon.print("Connecting to the GPRS network...");
-            if (!modem.gprsConnect(apn, user, pass))
-            {
-                SerialMon.println(" fail");
-            }
-            SerialMon.println(" success");
-
-            // if GPRS wasn't connected after 2 mins restart esp
-            if ((millis() - waitTime) > 120000)
-            {
-                sysRestart();
-            }
-        }
-    }
+    gprsConnect();
 
     // reconnect to mqtt
     if (!mqtt.connected())
@@ -402,6 +306,77 @@ void loop()
     {
         blink();
         previousTime3s = millis();
+    }
+}
+
+void netConnect()
+{
+    // if sim800 isn't registered we will wait
+    if (!modem.isNetworkConnected())
+    {
+        waitTime = millis();
+        while (!modem.isNetworkConnected())
+        {
+            // blink twice
+            blink();
+            blink();
+
+            // start modem (gsm module)
+            modem.restart();
+
+            // Print modem information
+            String modemInfo = modem.getModemInfo();
+            SerialMon.print("Modem Info: ");
+            SerialMon.println(modemInfo);
+            Serial.println("modem is not connected to network, waiting 5 seconds...");
+            delay(5000);
+
+            // if network didn't connect in 2 mins
+            if (millis() - waitTime > 120000)
+            {
+                sysRestart();
+            }
+        }
+    }
+}
+void gprsConnect()
+{
+    // check if modem is connected to network
+    if (modem.isNetworkConnected())
+    {
+        waitTime = millis();
+        SerialMon.println("modem  network is connected");
+        // Connect to the GPRS network
+        if (!modem.isGprsConnected())
+        {
+            while (!modem.gprsConnect(apn, user, pass))
+            {
+                // blink 3 times
+                blink();
+                blink();
+                blink();
+
+                SerialMon.print("Connecting to the GPRS...");
+                if (!modem.gprsConnect(apn, user, pass))
+                {
+                    SerialMon.println(" fail");
+                }
+                SerialMon.println(" success");
+                // if GPRS wasn't connected after 2 mins restart esp
+                if ((millis() - waitTime) > 120000)
+                {
+                    sysRestart();
+                }
+            }
+        }
+        else
+        {
+            Serial.println("connected to GPRS");
+        }
+    }
+    else
+    {
+        SerialMon.println("modem network is not connected");
     }
 }
 
@@ -944,7 +919,7 @@ void humidityRead()
 }
 void sysRestart()
 {
-    digitalWrite(comPin,1);
+    digitalWrite(comPin, 1);
     Serial.print("System is gonna restart in 3");
     delay(1000);
     Serial.print(" 2");
