@@ -17,10 +17,10 @@
 
 // path variables------------------
 const char *serverPath = "sed-smarthome.ir";
-const String sysPath = "/karkevand/httpProt/getInfo.php";
-const String cmdPath = "/karkevand/httpProt/postInfo.php";
+const String getPath = "/karkevand/httpProt/getInfo.php";
+const String postPath = "/karkevand/httpProt/postInfo.php";
 String sysInfoJson = "";
-String cmdInfojson = "";
+String cmdInfoJson = "";
 
 // GPRS credentials
 const char apn[] = "rightel"; // Replace with your APN
@@ -92,11 +92,12 @@ HttpClient http(client, serverPath, 80); // Replace with your server address
 // function forward declaration------
 void netConnect();
 void gprsConnect();
-bool gsmPost(String postData, String path);
+void pinInit();
+bool gsmPost(String postData, bool isSys /*is it a sys info*/);
 bool gsmGet();
-void dataUpdate();
+void dataUpdateForCmd();
 String dataPrepareForSys();
-String dataPrepareForCmd(bool valveSt);
+String dataPrepareForCmd();
 void sysRestart();
 void blink();
 void getFromEEPROM();
@@ -104,7 +105,10 @@ bool valveOpen();
 int rtcTimeDate();
 void putToEEPROM();
 int createNextIrrTimeStamp();
+bool insertRec();
 bool valveClose();
+String myTime();
+void dataUpdateForStart();
 //-----------------------------------
 
 // declare json handler
@@ -135,8 +139,9 @@ void setup()
     copy = false;
 
     // post starting message to sysInfo & cmdInfo to go to 0 position
-    gsmPost(dataPrepareForCmd(false), cmdPath);
-    gsmPost(dataPrepareForSys(), sysPath);
+    // both sysInfo & cmdInfo must be in same 0 position
+    gsmPost(dataPrepareForCmd(), 0);
+    gsmPost(dataPrepareForSys(), 1);
 }
 void loop()
 {
@@ -163,14 +168,14 @@ void loop()
         // check for valve close cmd
         if (valve && !valveCmd)
         {
-            Serial.println("Valve Open cmd, closing valve...");
-            // valveClose();
+            Serial.println("Valve Close cmd, closing valve...");
+            valveClose();
         }
 
         // send gsmpost request if get was successful
         if (getSuccess)
         {
-            gsmPost(dataPrepareForSys(), sysPath);
+            gsmPost(dataPrepareForSys(), 1);
         }
 
         loop5sec = millis();
@@ -183,7 +188,7 @@ void loop()
         if (valve && (millis() - irrStartTime) > duration * 1000)
         {
             Serial.println("Duration finished, Closing valve...");
-            // valveClose();
+            valveClose();
         }
     }
 
@@ -211,7 +216,7 @@ void loop()
     if (millis() - copyTimer > 20)
     {
         copy = 0;
-        gsmPost(dataPrepareForSys(), sysPath);
+        gsmPost(dataPrepareForSys(), 1);
     }
 }
 
@@ -304,8 +309,9 @@ void pinInit()
     digitalWrite(sim800ResetPin, 1);
     digitalWrite(comPin, 0);
 }
-bool gsmPost(String postData, String path)
+bool gsmPost(String postData, bool isSys /*is it a sys info*/)
 {
+    blink();
     // check modem signal quality
     int signalQuality = modem.getSignalQuality();
     SerialMon.print("Signal quality: ");
@@ -319,11 +325,13 @@ bool gsmPost(String postData, String path)
         // check if modem gprs is connected
         if (modem.isGprsConnected())
         {
-            String postMessage = "info=" + postData;
+            String postMessage = "";
+
+            postMessage = isSys ? "sysInfo=" + postData : postMessage = "cmdInfo=" + postData;
 
             // Set the request headers
             http.beginRequest();
-            http.post(path);
+            http.post(postPath);
             http.sendHeader("Content-Type", "application/x-www-form-urlencoded");
             http.sendHeader("Content-Length", postMessage.length());
             // http.sendHeader("X-Custom-Header", "custom-header-value");
@@ -384,19 +392,24 @@ bool gsmPost(String postData, String path)
 }
 bool gsmGet()
 {
+    blink();
 
     int statusCode = 0;
     int tryNum = 0;
-    while (statusCode != 200)
+    String response = "";
+    while (statusCode != 200 || response != "")
     {
         tryNum++;
         // Send the HTTP GET request
-        http.get(cmdPath); // Replace with your resource path
+        http.get(getPath); // Replace with your resource path
         // Read the response status code
         statusCode = http.responseStatusCode();
         SerialMon.print("Response status code: ");
         SerialMon.println(statusCode);
-
+        // Read the response body
+        response = http.responseBody();
+        SerialMon.println("Response:");
+        SerialMon.println(response);
         if (tryNum > 3)
         {
             return false;
@@ -407,11 +420,6 @@ bool gsmGet()
         }
         delay(1000);
     }
-
-    // Read the response body
-    String response = http.responseBody();
-    SerialMon.println("Response:");
-    SerialMon.println(response);
     // Close the connection
     http.stop();
     SerialMon.println("Server disconnected");
@@ -420,12 +428,11 @@ bool gsmGet()
     deserializeJson(cmdInfo, response);
 
     // update latest data
-    dataUpdate();
+    dataUpdateForCmd();
 
     return true;
 }
-
-void dataUpdate()
+void dataUpdateForCmd()
 {
     valveCmd = cmdInfo["valveCmd"];
     restartCmd = cmdInfo["restartCmd"];
@@ -450,8 +457,27 @@ void dataUpdate()
         copyTimer = millis();
     }
 }
+void dataUpdateForStart()
+{
+    valveCmd = valve = sysInfo["valve"];
+    restartCmd = restart = sysInfo["restart"];
+    durationCmd = duration = sysInfo["duration"];
+    autoIrrEnCmd = autoIrrEn = sysInfo["autoIrrEn"];
+    lastIrrTS = sysInfo["lastIrrTS"];
+    howOftenCmd = howOften = sysInfo["howOften"];
+    hourCmd = hour = sysInfo["hour"];
+    minuteCmd = minute = sysInfo["minute"];
+
+    humHiLiCmd = humHiLi = sysInfo["humHiLi"];
+    humLoLiCmd = humLoLi = sysInfo["humLoLi"];
+
+
+    Serial.print("hour became: ");
+    Serial.println(hour);
+}
 String dataPrepareForSys()
 {
+    sysInfo["working time"] = myTime();
     sysInfo["valve"] = valve;
     sysInfo["humidity"] = humidity;
     sysInfo["copy"] = copy;
@@ -468,9 +494,9 @@ String dataPrepareForSys()
 
     return sysInfoJson;
 }
-String dataPrepareForCmd(bool valveSt)
+String dataPrepareForCmd()
 {
-    cmdInfo["valveCmd"] = valveSt;
+    cmdInfo["valveCmd"] = false;
     cmdInfo["restartCmd"] = restart;
     cmdInfo["autoIrrEnCmd"] = autoIrrEn;
     cmdInfo["durationCmd"] = duration;
@@ -481,10 +507,10 @@ String dataPrepareForCmd(bool valveSt)
     cmdInfo["humHiLiCmd"] = humHiLi;
     cmdInfo["humLoLiCmd"] = humLoLi;
 
-    cmdInfojson = "";
-    serializeJson(cmdInfo, cmdInfojson);
+    cmdInfoJson = "";
+    serializeJson(cmdInfo, cmdInfoJson);
 
-    return cmdInfojson;
+    return cmdInfoJson;
 }
 void sysRestart()
 {
@@ -524,7 +550,7 @@ void getFromEEPROM()
     Serial.println("Data loaded from EEPROM:");
     Serial.println(sysInfoJson);
     deserializeJson(sysInfo, sysInfoJson);
-    dataUpdate();
+    dataUpdateForStart();
     EEPROM.end();
 }
 bool valveOpen()
@@ -542,8 +568,8 @@ bool valveOpen()
     putToEEPROM();
     createNextIrrTimeStamp();
 
-    gsmPost(dataPrepareForCmd(false), cmdPath);
-    gsmPost(dataPrepareForSys(), sysPath);
+    gsmPost(dataPrepareForCmd(), 0);
+    gsmPost(dataPrepareForSys(), 1);
     insertRec();
     return 1;
 }
@@ -721,6 +747,14 @@ bool valveClose()
     copy = true;
     copyTimer = millis();
     digitalWrite(valvePin, valve);
-    gsmPost(dataPrepareForSys(), sysPath);
+    gsmPost(dataPrepareForSys(), 1);
     return 1;
 };
+String myTime()
+{
+    int days = millis() / 86400000;
+    int hours = (millis() - days * 86400000) / 3600000;
+    int minutes = ((millis() - days * 86400000) - hours * 3600000) / 60000;
+    int seconds = (millis() / 1000) % 60;
+    return String(days) + ":" + String(hours) + ":" + String(minutes) + ":" + String(seconds);
+}
