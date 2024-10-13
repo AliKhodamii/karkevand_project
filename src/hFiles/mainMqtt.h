@@ -2,8 +2,8 @@
 #define TINY_GSM_MODEM_SIM800  // Define the modem type as SIM800
 #define TINY_GSM_USE_GPRS true // We're using GPRS, not WiFi
 #define SerialMon Serial       // For debugging
-#define MODEM_RX D6            // RX pin of ESP8266 connected to TX pin of SIM800L
-#define MODEM_TX D7            // TX pin of ESP8266 connected to RX pin of SIM800L
+#define MODEM_RX D7            // RX pin of ESP8266 connected to TX pin of SIM800L
+#define MODEM_TX D6            // TX pin of ESP8266 connected to RX pin of SIM800L
 #define EEPROM_SIZE 4096
 // ---------------------------
 
@@ -61,7 +61,7 @@ const int valvePin = D1;
 const int lowHumidityPin = D2;
 const int normalHumidityPin = D3;
 const int sim800ResetPin = D5;
-const int comPin = D8;
+const int comPin = D0;
 const int humidityPin = A0;
 // ---------------------------
 
@@ -88,6 +88,7 @@ void putToEEPROM();
 void blink();
 void humidityRead();
 void sysRestart();
+bool insertRec();
 //-----------------------------------
 
 // declare json handler
@@ -113,18 +114,22 @@ const char pass[] = "";       // GPRS password, if any
 
 // MQTT broker details-----------------------
 const char *broker = "test.mosquitto.org";
+
 const int port = 1883; // MQTT port
+// const int port = 31766; // MQTT port
 
 // Topics for publishing/subscribing
-const char *topicInit = "karSSG/ESP";
-const char *topicLed = "karSSG/client";
+// const char *topicInit = "karSSG/ESP";
+const char *topicInit = "sedsmarthome/feeds/karssg.esp";
+// const char *topicLed = "karSSG/client";
+const char *topicLed = "sedsmarthome/feeds/karssg.client";
+
 //-------------------------------------------
 // init modem and httpClient and mqttClient
 TinyGsm modem(SerialAT);
-TinyGsmClient httpClient(modem);
-TinyGsmClient mqttClient(modem);
-HttpClient http(httpClient, serverPath, 80); // Replace with your server address
-PubSubClient mqtt(mqttClient);
+TinyGsmClient client(modem);
+HttpClient http(client, "sed-smarthome.ir", 80); // Replace with your server address
+PubSubClient mqtt(client);
 //------------------------------------------
 
 void setup()
@@ -141,7 +146,7 @@ void setup()
     pinMode(sim800ResetPin, OUTPUT);
     pinMode(comPin, OUTPUT);
 
-    pinMode(humidityPin, OUTPUT);
+    pinMode(humidityPin, INPUT);
 
     // pins initial values
     digitalWrite(valvePin, 0);
@@ -419,10 +424,10 @@ bool gsmPost()
             SerialMon.println("modem GPRS is connected");
 
             // connect to server
-            if (!httpClient.connected())
+            if (!client.connected())
             {
                 SerialMon.println("Connecting to server...");
-                if (!httpClient.connect(serverPath, 80))
+                if (!client.connect(serverPath, 80))
                 { // Replace with your server address
                     SerialMon.println(" fail");
                     return false;
@@ -494,13 +499,14 @@ bool gsmPost()
     }
     return false;
 }
+
 bool gsmGet()
 {
     SerialMon.println("get request...");
-    if (!httpClient.connected())
+    if (!client.connected())
     {
         SerialMon.println("Connecting to server...");
-        if (!httpClient.connect(serverPath, 80))
+        if (!client.connect(serverPath, 80))
         { // Replace with your server address
             SerialMon.println(" fail");
             delay(10000);
@@ -642,7 +648,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
         valveClose();
 
         dataPrepare();
-        sendMessage = "valve is closed, info" + sysInfoJson;
+        sendMessage = "valve is close, info" + sysInfoJson;
         Serial.println(sendMessage.c_str());
         mqtt.publish(topicInit, sendMessage.c_str());
     }
@@ -650,6 +656,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
     {
         dataPrepare();
         sendMessage = "info" + sysInfoJson;
+        Serial.print("publishing message to broker, message: ");
         Serial.println(sendMessage.c_str());
         mqtt.publish(topicInit, sendMessage.c_str());
     }
@@ -670,7 +677,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
         createNextIrrTimeStamp();
 
         dataPrepare();
-        sendMessage = "autoIrrigation is on, info" + sysInfoJson;
+        sendMessage = "autoIrr is on, info" + sysInfoJson;
         Serial.println(sendMessage.c_str());
         mqtt.publish(topicInit, sendMessage.c_str());
     }
@@ -723,6 +730,7 @@ bool valveOpen()
     lastIrrTS = rtcTimeDate();
     putToEEPROM();
     createNextIrrTimeStamp();
+    insertRec();
     return 1;
 }
 bool valveClose()
@@ -936,10 +944,112 @@ void humidityRead()
 }
 void sysRestart()
 {
-
+    digitalWrite(comPin,1);
+    Serial.print("System is gonna restart in 3");
+    delay(1000);
+    Serial.print(" 2");
+    delay(1000);
+    Serial.println(" 1");
     digitalWrite(sim800ResetPin, 0);
     delay(1000);
     digitalWrite(sim800ResetPin, 1);
-    delay(100);
+    delay(1000);
     ESP.restart();
+}
+
+bool insertRec()
+{
+    /*
+    1- disconnect mqttClient
+    2- perform post req
+    3- disconnect httpClient
+    4- connect mqtt client again
+    */
+    // check modem signal quality
+    int signalQuality = modem.getSignalQuality();
+    SerialMon.print("Signal quality: ");
+    SerialMon.println(signalQuality);
+
+    // check if modem is connected to network
+    if (modem.isNetworkConnected())
+    {
+        // check if modem gprs is connected
+        if (modem.isGprsConnected())
+        {
+
+            // disconnect mqtt to connect http and send post req
+            mqtt.disconnect();
+
+            // post request data
+            String sendData = "insertIntoDB={\"duration\" : " + String(duration) + "}";
+            String path = "/karkevand/php/insertToDb.php";
+            String conType = "application/x-www-form-urlencoded";
+
+            Serial.println("inserting new irr record to db");
+
+            Serial.println("sendData: " + sendData);
+
+            // Set the request headers
+            http.post(path, conType, sendData);
+
+            // Read the response
+            int statusCode = http.responseStatusCode();
+            String response = http.responseBody();
+
+            SerialMon.print("Status code: ");
+            SerialMon.println(statusCode);
+            SerialMon.print("Response: ");
+            SerialMon.println(response);
+            // Close the connection
+            http.stop();
+            SerialMon.println("Server disconnected");
+
+            // Reconnect to MQTT after HTTP POST
+            Serial.print("reconnect to mqtt...");
+            while (!mqtt.connected())
+            {
+                if (!mqttConnect())
+                {
+                    Serial.println(" failed! retry in 1 sec...");
+                    delay(1000);
+                }
+                else
+                {
+                    Serial.println(" succeed!");
+                    mqtt.subscribe(topicLed);
+                }
+            }
+
+            if (statusCode == 200)
+                return true;
+            else
+                return false;
+        }
+        else
+        {
+            SerialMon.println("modem GPRS is not connected");
+
+            // try 2 time to connect modem GPRS
+            for (int i = 1; i <= 2; i++)
+            {
+                SerialMon.print("trying to connect modem GPRS, try number: ");
+                SerialMon.println(i);
+                // Connect to the GPRS network
+                SerialMon.print("Connecting to the network...");
+                if (modem.gprsConnect(apn, user, pass))
+                {
+                    SerialMon.println(" success");
+                    break;
+                }
+                SerialMon.println(" fail");
+                SerialMon.println("unable to connect modem GPRS");
+            }
+        }
+    }
+    else
+    {
+        SerialMon.println("modem network is not connected");
+        return false;
+    }
+    return false;
 }

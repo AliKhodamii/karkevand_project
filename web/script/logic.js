@@ -1,8 +1,11 @@
-var subTopic = "karSSG/ESP";
-var pubTopic = "karSSG/client";
+// var subTopic = "karSSG/ESP";
+var subTopic = "sedsmarthome/feeds/karssg.esp";
+// var pubTopic = "karSSG/client";
+var pubTopic = "sedsmarthome/feeds/karssg.client";
 var sysInfoJson = "";
 var updateAutoIrrSec = true;
 var updateDurationEn = true;
+var waitingForResponse = false;
 var unsuccessfulTries = 0;
 
 var sysInfo;
@@ -28,9 +31,14 @@ var t = setInterval(getInfo, 5000);
 
 function mqttConnect() {
   // connection parameters
-  const brokerUrl = "mqtt://test.mosquitto.org:8080"; // Public test broker
+  const brokerUrl = "mqtt://test.mosquitto.org"; // Public test broker
   const options = {
-    clientId: "web", // Client ID (optional)
+    // username: username,
+    // password: aioKey,
+    // port: 443,
+    // port: 31766,
+    port: 8081,
+    clientId: "web123", // Client ID (optional)
     keepalive: 60,
     reconnectPeriod: 1000, // Reconnect after 1 second if disconnected
   };
@@ -53,11 +61,39 @@ function mqttConnect() {
     console.log("Received message:", sysInfoJson);
 
     //insert new irr rec to db if valve open response came
-    if (sysInfoJson.indexOf("valve is open") != -1) {
-      insertIntoDB();
-    }
     var bracketIndex = sysInfoJson.indexOf("{");
-    if (bracketIndex != -1) {
+
+    if (bracketIndex != -1 && !waitingForResponse) {
+      sysInfoJson = sysInfoJson.substring(bracketIndex);
+      updateUI();
+    }
+    if (sysInfoJson.indexOf("valve is open") != -1 && waitingForResponse) {
+      waitingForResponse = false;
+      // insertIntoDB();
+      sysInfoJson = sysInfoJson.substring(bracketIndex);
+      updateUI();
+    }
+    if (sysInfoJson.indexOf("valve is close") != -1 && waitingForResponse) {
+      waitingForResponse = false;
+      // insertIntoDB();
+      sysInfoJson = sysInfoJson.substring(bracketIndex);
+      updateUI();
+    }
+    if (sysInfoJson.indexOf("autoIrr is on") != -1 && waitingForResponse) {
+      waitingForResponse = false;
+      // insertIntoDB();
+      sysInfoJson = sysInfoJson.substring(bracketIndex);
+      updateUI();
+    }
+    if (sysInfoJson.indexOf("autoIrr is off") != -1 && waitingForResponse) {
+      waitingForResponse = false;
+      // insertIntoDB();
+      sysInfoJson = sysInfoJson.substring(bracketIndex);
+      updateUI();
+    }
+    if (sysInfoJson.indexOf("autoIrr updated") != -1 && waitingForResponse) {
+      waitingForResponse = false;
+      // insertIntoDB();
       sysInfoJson = sysInfoJson.substring(bracketIndex);
       updateUI();
     }
@@ -161,7 +197,7 @@ function updateHumidity() {
     sysInfo.humidity + "%";
 }
 function updateDuration() {
-  doUpdateDuration = false;
+  updateDurationEn = false;
   var m = 0;
   var h = 0;
   h = Math.floor(sysInfo.duration / 60);
@@ -326,6 +362,8 @@ function updateAutoIrrEn() {
 function vlvBtnClick() {
   // release duration update En
   updateDurationEn = true;
+  //wait for valve open response
+  waitingForResponse = true;
 
   // check if valve is open
   if (sysInfo.valve) {
@@ -365,7 +403,8 @@ function vlvBtnClick() {
 function autoIrrBtnClick() {
   // release auto irr section to be updated
   updateAutoIrrSec = true;
-
+  //wait for valve open response
+  waitingForResponse = true;
   //check if auto irr was enable or not
   if (sysInfo.autoIrrEn) {
     // publish open cmd
@@ -378,15 +417,19 @@ function autoIrrBtnClick() {
   } else {
     // create command json
     var cmd = {};
-    var hour = document.getElementById("AIdurationHour").value;
-    var min = document.getElementById("AIdurationMin").value;
-    var irrHowOften = document.getElementById("howOften").value;
-    var AImin = document.getElementById("minute").value;
-    var AIhour = document.getElementById("hour").value;
-    var irrDuration = Number(hour) * 60 + Number(min);
+    var AIhour = sysInfo.hour;
+    var AImin = sysInfo.min;
+    var irrHowOften = sysInfo.howOften;
+    var irrDuration = sysInfo.duration;
+    // var hour = document.getElementById("AIdurationHour").value;
+    // var min = document.getElementById("AIdurationMin").value;
+    // var irrHowOften = document.getElementById("howOften").value;
+    // var AImin = document.getElementById("minute").value;
+    // var AIhour = document.getElementById("hour").value;
+    // var irrDuration = Number(hour) * 60 + Number(min);
     cmd.autoIrrEn = 1;
     cmd.duration = irrDuration;
-    cmd.min = AImin;
+    cmd.minute = AImin;
     cmd.hour = AIhour;
     cmd.howOften = irrHowOften;
 
@@ -413,6 +456,8 @@ function autoIrrBtnClick() {
 function saveBtnClick() {
   // release auto irr section to be updated
   updateAutoIrrSec = true;
+  //wait for valve open response
+  waitingForResponse = true;
 
   // create command json
   var cmd = {};
@@ -424,7 +469,7 @@ function saveBtnClick() {
   var irrDuration = Number(hour) * 60 + Number(min);
   cmd.autoIrrEn = sysInfo.autoIrrEn;
   cmd.duration = irrDuration;
-  cmd.min = AImin;
+  cmd.minute = AImin;
   cmd.hour = AIhour;
   cmd.howOften = irrHowOften;
 

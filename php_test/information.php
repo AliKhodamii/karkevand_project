@@ -5,3 +5,4 @@ header("Pragma: no-cache");
 
 $homepage = file_get_contents('information.txt');
 echo $homepage;
+?>

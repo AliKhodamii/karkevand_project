@@ -2,8 +2,8 @@
 #define TINY_GSM_MODEM_SIM800  // Define the modem type as SIM800
 #define TINY_GSM_USE_GPRS true // We're using GPRS, not WiFi
 #define SerialMon Serial       // For debugging
-#define MODEM_RX D6            // RX pin of ESP8266 connected to TX pin of SIM800L
-#define MODEM_TX D7            // TX pin of ESP8266 connected to RX pin of SIM800L
+#define MODEM_RX D7            // RX pin of ESP8266 connected to TX pin of SIM800L
+#define MODEM_TX D6            // TX pin of ESP8266 connected to RX pin of SIM800L
 // ---------------------------
 
 // includes-------------------
@@ -15,8 +15,8 @@
 
 // variables------------------
 const char *serverPath = "sed-smarthome.ir";
-const String getPath = "/karkevand/information.php";
-const String postPath = "/karkevand/poster.php";
+const String getPath = "/karkevand/httpProt/getInfo.php";
+const String postPath = "/karkevand/httpProt/postInfo.php";
 String sysInfoJson = "";
 
 // GPRS credentials
@@ -38,11 +38,10 @@ int humidityLowLimit = 0;
 // pin initialize-------------
 // 1-valve 2,3-TX RX 4-LowHumidity 5-NormalHumidity 6-sim800reset 7-comPin 8-
 const int valvePin = D1;
-const int lowHumidityPin = D4;
-const int normalHumidityPin = D5;
-const int sim800ResetPin = D6;
-const int comPin = D7;
-
+const int lowHumidityPin = D2;
+const int normalHumidityPin = D3;
+const int sim800ResetPin = D5;
+const int comPin = D0;
 const int humidityPin = A0;
 // ---------------------------
 
@@ -68,6 +67,8 @@ void setup()
 {
     SerialMon.begin(9600); // start serialMon for debug
     delay(10);
+    SerialAT.begin(9600); // Start communication with SIM800L at 9600 baud
+    delay(3000);
 
     // define pins mode
     pinMode(valvePin, OUTPUT);
@@ -76,38 +77,41 @@ void setup()
     pinMode(sim800ResetPin, OUTPUT);
     pinMode(comPin, OUTPUT);
 
-    pinMode(humidityPin, OUTPUT);
+    pinMode(humidityPin, INPUT);
 
     // pins initial values
     digitalWrite(valvePin, 0);
     digitalWrite(lowHumidityPin, 0);
     digitalWrite(normalHumidityPin, 0);
-    digitalWrite(sim800ResetPin, 0);
+    digitalWrite(sim800ResetPin, 1);
     digitalWrite(comPin, 0);
 
     // if sim800 isn't registered we will wait
-    while (!modem.isNetworkConnected())
+    if (!modem.isNetworkConnected())
     {
-        // initial setup for sim800 to work
-        SerialAT.begin(9600); // Start communication with SIM800L at 9600 baud
-        delay(3000);
-
-        // start modem (gsm module)
-        modem.restart();
-
-        // Print modem information
-        String modemInfo = modem.getModemInfo();
-        SerialMon.print("Modem Info: ");
-        SerialMon.println(modemInfo);
-
-        // check if modem is connected to network
-        if (modem.isNetworkConnected())
+        while (!modem.isNetworkConnected())
         {
-            SerialMon.println("modem  network is connected");
-            // Connect to the GPRS network
+            // start modem (gsm module)
+            modem.restart();
+
+            // Print modem information
+            String modemInfo = modem.getModemInfo();
+            SerialMon.print("Modem Info: ");
+            SerialMon.println(modemInfo);
+            Serial.println("modem is not connected to network, waiting 5 seconds...");
+            delay(5000);
+        }
+    }
+    // check if modem is connected to network
+    if (modem.isNetworkConnected())
+    {
+        SerialMon.println("modem  network is connected");
+        // Connect to the GPRS network
+        if (!modem.isGprsConnected())
+        {
             while (!modem.gprsConnect(apn, user, pass))
             {
-                SerialMon.print("Connecting to the GPRS network...");
+                SerialMon.print("Connecting to the GPRS...");
                 if (!modem.gprsConnect(apn, user, pass))
                 {
                     SerialMon.println(" fail");
@@ -115,12 +119,10 @@ void setup()
                 SerialMon.println(" success");
             }
         }
-        else
-        {
-            SerialMon.println("modem network is not connected");
-        }
-
-        delay(5000);
+    }
+    else
+    {
+        SerialMon.println("modem network is not connected");
     }
 
     // first http get request to get initial values
@@ -154,6 +156,17 @@ void loop()
         }
         SerialMon.println(" success");
     }
+    Serial.println("");
+    Serial.println("");
+    Serial.println("Start get request");
+    gsmGet();
+    Serial.println("End get request");
+    delay(3000);
+    Serial.println("");
+    Serial.println("");
+    Serial.println("Start post request");
+    gsmPost();
+    Serial.println("End post request");
 
     delay(5000);
 }
@@ -175,17 +188,17 @@ bool gsmPost()
         {
             SerialMon.println("modem GPRS is connected");
 
-            // connect to server
-            if (!client.connected())
-            {
-                SerialMon.println("Connecting to server...");
-                if (!client.connect(serverPath, 80))
-                { // Replace with your server address
-                    SerialMon.println(" fail");
-                    return false;
-                }
-                SerialMon.println(" success");
-            }
+            // // connect to server
+            // if (!client.connected())
+            // {
+            //     SerialMon.println("Connecting to server...");
+            //     if (!client.connect(serverPath, 80))
+            //     { // Replace with your server address
+            //         SerialMon.println(" fail");
+            //         return false;
+            //     }
+            //     SerialMon.println(" success");
+            // }
 
             // prepare data to be posted
             dataPrepare();
@@ -254,17 +267,17 @@ bool gsmPost()
 bool gsmGet()
 {
 
-    if (!client.connected())
-    {
-        SerialMon.println("Connecting to server...");
-        if (!client.connect(serverPath, 80))
-        { // Replace with your server address
-            SerialMon.println(" fail");
-            delay(10000);
-            return "ERROR";
-        }
-        SerialMon.println(" success");
-    }
+    // if (!client.connected())
+    // {
+    //     SerialMon.println("Connecting to server...");
+    //     if (!client.connect(serverPath, 80))
+    //     { // Replace with your server address
+    //         SerialMon.println(" fail");
+    //         delay(10000);
+    //         return "ERROR";
+    //     }
+    //     SerialMon.println(" success");
+    // }
 
     int statusCode = 0;
     int tryNum = 0;
