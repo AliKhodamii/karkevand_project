@@ -42,6 +42,7 @@ function mqttConnect() {
   let isConnected = false;
 
   client.on("connect", () => {
+    alert("connected to mqtt");
     console.log("Connected to broker");
     isConnected = true;
     getInfo();
