@@ -13,10 +13,6 @@ void setup()
     Serial.println("Creating data...");
     EEPROM.begin(EEPROM_SIZE);
 
-    doc["time"] = "";
-    doc["valve"] = true;
-    doc["restart"] = true;
-    doc["humidity"] = 0;
     doc["duration"] = 2;
     doc["humHiLi"] = 800;
     doc["humLoLi"] = 1024;

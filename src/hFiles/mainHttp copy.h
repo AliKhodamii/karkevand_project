@@ -29,9 +29,6 @@ const char user[] = "";       // GPRS username, if any
 const char pass[] = "";       // GPRS password, if any
 
 // control variables
-bool openedOnce = false;
-bool closedOnce = false;
-bool autoIrrIsWorking = false;
 bool valve = false;
 bool restart = false;
 bool copy = false;
@@ -48,7 +45,8 @@ int hour = 0;
 int minute = 0;
 
 // command variables
-bool valveCmd = false;
+String valveCmd = "noAction";
+
 bool restartCmd = false;
 bool autoIrrEnCmd = false;
 
@@ -138,6 +136,11 @@ void setup()
     // check if modem is connected to network
     gprsConnect();
 
+    // initial values
+    valve = false;
+    restart = false;
+    copy = false;
+
     // post starting message to sysInfo & cmdInfo to go to 0 position
     // both sysInfo & cmdInfo must be in same 0 position
     gsmPost(dataPrepareForCmd(), 0);
@@ -159,14 +162,14 @@ void loop()
         getSuccess = gsmGet();
 
         // check for valve open cmd
-        if (valve && !openedOnce)
+        if (!valve && valveCmd == "open")
         {
             Serial.println("Valve Open cmd, Openning valve...");
             valveOpen();
         }
 
         // check for valve close cmd
-        if (!valve && !closedOnce && !autoIrrIsWorking)
+        if (valve && valveCmd == "close")
         {
             Serial.println("Valve Close cmd, Closing valve...");
             valveClose();
@@ -188,7 +191,6 @@ void loop()
         if (valve && (millis() - irrStartTime) > duration * 1000)
         {
             Serial.println("Duration finished, Closing valve...");
-            autoIrrIsWorking = false;
             valveClose();
         }
     }
@@ -201,7 +203,6 @@ void loop()
         if ((currentTimestamp > nextIrrTS))
         {
             Serial.println("auto Irrigation will happen now...");
-            autoIrrIsWorking = true;
             valveOpen();
         }
         else if ((currentTimestamp - lastIrrTS) > (howOften * 24 * 60 * 60))
@@ -416,7 +417,7 @@ bool gsmGet()
         {
             return false;
         }
-        if (statusCode == 200 && response != "")
+        if (statusCode == 200)
         {
             break;
         }
@@ -436,7 +437,7 @@ bool gsmGet()
 }
 void dataUpdateForCmd()
 {
-    valveCmd = cmdInfo["valveCmd"];
+    valveCmd = String(cmdInfo["valveCmd"]);
     restartCmd = cmdInfo["restartCmd"];
     durationCmd = cmdInfo["durationCmd"];
     autoIrrEnCmd = cmdInfo["autoIrrEnCmd"];
@@ -447,10 +448,6 @@ void dataUpdateForCmd()
     humHiLiCmd = cmdInfo["humHiLiCmd"];
     humLoLiCmd = cmdInfo["humLoLiCmd"];
 
-    if (autoIrrEnCmd != autoIrrEn && !autoIrrEnCmd)
-    {
-        autoIrrIsWorking = false;
-    }
     if (durationCmd != duration || autoIrrEnCmd != autoIrrEn || howOftenCmd != howOften || hourCmd != hour || minuteCmd != minute)
     {
         Serial.println("a change in cmd file found, updating system info");
@@ -469,37 +466,26 @@ void dataUpdateForCmd()
         gsmPost(dataPrepareForSys(), 1);
         putToEEPROM();
     }
-
-    // update system info
-    valve = valveCmd;
-    restart = restartCmd;
-    duration = durationCmd;
-    duration = durationCmd;
-    autoIrrEn = autoIrrEnCmd;
-    howOften = howOftenCmd;
-    hour = hourCmd;
-    minute = minuteCmd;
-    humHiLi = humHiLiCmd;
-    humLoLi = humLoLiCmd;
 }
 void dataUpdateForStart()
 {
     // valveCmd = "noAction";
     // valve = sysInfo["valve"];
     // restartCmd = restart = sysInfo["restart"];
-    valveCmd = valve = false;
-    restartCmd = restart = false;
+    valve = false;
+    restart = false;
     copy = false;
+    restart = false;
 
-    durationCmd = duration = eepromInfo["duration"];
-    autoIrrEnCmd = autoIrrEn = eepromInfo["autoIrrEn"];
-    lastIrrTS = eepromInfo["lastIrrTS"];
-    howOftenCmd = howOften = eepromInfo["howOften"];
-    hourCmd = hour = eepromInfo["hour"];
-    minuteCmd = minute = eepromInfo["minute"];
+    durationCmd = duration = sysInfo["duration"];
+    autoIrrEnCmd = autoIrrEn = sysInfo["autoIrrEn"];
+    lastIrrTS = sysInfo["lastIrrTS"];
+    howOftenCmd = howOften = sysInfo["howOften"];
+    hourCmd = hour = sysInfo["hour"];
+    minuteCmd = minute = sysInfo["minute"];
 
-    humHiLiCmd = humHiLi = eepromInfo["humHiLi"];
-    humLoLiCmd = humLoLi = eepromInfo["humLoLi"];
+    humHiLiCmd = humHiLi = sysInfo["humHiLi"];
+    humLoLiCmd = humLoLi = sysInfo["humLoLi"];
 }
 String dataPrepareForSys()
 {
@@ -522,7 +508,7 @@ String dataPrepareForSys()
 }
 String dataPrepareForCmd()
 {
-    cmdInfo["valveCmd"] = valve;
+    cmdInfo["valveCmd"] = "noAction";
     cmdInfo["restartCmd"] = restart;
     cmdInfo["autoIrrEnCmd"] = autoIrrEn;
     cmdInfo["durationCmd"] = duration;
@@ -596,9 +582,6 @@ void getFromEEPROM()
 }
 bool valveOpen()
 {
-    closedOnce = false;
-    openedOnce = true;
-
     Serial.println("Valve Opening...");
 
     valve = true;
@@ -612,6 +595,7 @@ bool valveOpen()
     putToEEPROM();
     createNextIrrTimeStamp();
 
+    gsmPost(dataPrepareForCmd(), 0);
     gsmPost(dataPrepareForSys(), 1);
     insertRec();
     return 1;
@@ -786,15 +770,13 @@ bool insertRec()
 }
 bool valveClose()
 {
-    openedOnce = false;
-    closedOnce = true;
-
     Serial.println("Valve Closing...");
     valve = false;
     copy = true;
     copyTimer = millis();
     digitalWrite(valvePin, valve);
     gsmPost(dataPrepareForSys(), 1);
+    gsmPost(dataPrepareForCmd(), 0);
     return 1;
 };
 String myTime()
