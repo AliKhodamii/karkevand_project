@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="./css/sytle.css" />
+    <title>SSG - karkevand</title>
+  </head>
+  <body>
+    <div id="disConDiv" class="displayNone">
+      <h1>ارتباط قطع شده :(</h1>
+      <img id="disConImg" src="./pics/loading2.png" alt="loading" />
+    </div>
+    <div class="mainContainer">
+      <div class="square connectionDiv">
+        <div class="ring-container displayNone">
+          <div class="ringring"></div>
+          <div class="onlineCircle"></div>
+        </div>
+        <span>&nbsp;</span>
+        <span id="conStatus">در حال اتصال...!</span>
+      </div>
+      <div class="square humidityDiv">
+        <table class="humidityTable">
+          <tr>
+            <td>
+              <p>
+                رطوبت خاک :
+                <span
+                  ><span id="humQuality"></span
+                  ><img
+                    src="./pics/loading2.png"
+                    alt="loading"
+                    name="loadingPic"
+                /></span>
+              </p>
+            </td>
+            <td style="text-align: center">
+              <span id="humidityPercent"></span
+              ><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span
+              ><img src="./pics/loading2.png" alt="loading" name="loadingPic" />
+              <img
+                id="checkedPic"
+                src="./pics/checked.png"
+                alt="checked"
+                class="humidityPic displayNone"
+              />
+              <img
+                id="warningPic"
+                src="./pics/warning.png"
+                alt="warning"
+                class="humidityPic displayNone"
+              />
+              <img
+                id="errorPic"
+                src="./pics/error.png"
+                alt="error"
+                class="humidityPic displayNone"
+              />
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="square valveDiv">
+        <table class="valveTable">
+          <tr>
+            <td style="text-align: center; padding-bottom: 20px" colspan="2">
+              <img src="./pics/loading2.png" alt="loading" name="loadingPic" />
+              <h3 id="valveStatus" class="valveIsClose"></h3>
+            </td>
+          </tr>
+          <tr>
+            <td style="width: 45%">
+              <table>
+                <tr>
+                  <td id="irrTimeTd" style="width: 70%">
+                    <div>
+                      <img src="./pics/timer.png" alt="timer" />&nbsp;مدت آبیاری
+                      :
+                    </div>
+                  </td>
+                  <td>
+                    <div id="irrigating" class="displayNone textCenter">
+                      در حال آبیاری...
+                    </div>
+                    <img
+                      src="./pics/loading2.png"
+                      alt="loading"
+                      name="loadingPic"
+                    />
+                    <div id="durationTimeDiv" class="displayNone">
+                      <div style="display: table; margin: auto">
+                        <div style="display: table-cell">
+                          <input
+                            type="text"
+                            name="durationMin"
+                            id="durationMin"
+                          />
+                        </div>
+                        <span>&nbsp;:&nbsp;</span>
+                        <div style="display: table-cell">
+                          <input
+                            type="text"
+                            name="durationHour"
+                            id="durationHour"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td style="width: 40%">
+              <div class="buttonDiv">
+                <button id="valveButton" class="loadingButton" disabled>
+                  <!-- <img
+                    src="./pics/loading2.png"
+                    alt="loading"
+                    name="loadingPic"
+                  /> -->
+                </button>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="square autoIrrDiv">
+        <table class="autoIrrTable">
+          <tr>
+            <td colspan="2">
+              <img src="./pics/loading2.png" alt="loading" name="loadingPic" />
+              <h3 id="autoIrrEn"></h3>
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: center" colspan="2">
+              <button id="autoIrrButton" class="loadingButton"></button>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <img src="./pics/calendar.png" alt="timer" /> تاریخ آبیاری بعدی
+            </td>
+            <td>
+              <img src="./pics/loading2.png" alt="loading" name="loadingPic" />
+              <img
+                src="./pics/cross.png"
+                alt="cross"
+                name="crossPic"
+                class="displayNone"
+              />
+              <span id="nextIrr" style="font-size: 20px"></span>
+            </td>
+          </tr>
+          <tr>
+            <td><img src="./pics/reapeat.png" alt="timer" /> تکرار آبیاری</td>
+            <td>
+              <img src="./pics/loading2.png" alt="loading" name="loadingPic" />
+              <img
+                src="./pics/cross.png"
+                alt="cross"
+                name="crossPic"
+                class="displayNone"
+              />
+              <div class="displayNone" id="howOftenDiv">
+                هر
+                <span><input type="text" name="howOften" id="howOften" /></span>
+                روز یکبار
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><img src="./pics/clock.png" alt="timer" /> ساعت آبیاری</td>
+            <td>
+              <img src="./pics/loading2.png" alt="loading" name="loadingPic" />
+              <img
+                src="./pics/cross.png"
+                alt="cross"
+                name="crossPic"
+                class="displayNone"
+              />
+              <div class="displayNone" id="irrClockDiv">
+                <span
+                  ><span><input type="text" name="minute" id="minute" /></span
+                ></span>
+                :
+                <span
+                  ><span><input type="text" name="hour" id="hour" /></span
+                ></span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><img src="./pics/timer.png" alt="timer" /> مدت آبیاری</td>
+            <td>
+              <img src="./pics/loading2.png" alt="loading" name="loadingPic" />
+              <img
+                src="./pics/cross.png"
+                alt="cross"
+                name="crossPic"
+                class="displayNone"
+              />
+              <div class="displayNone" id="irrTimeDiv">
+                <span
+                  ><span
+                    ><input
+                      type="text"
+                      name="AIdurationMin"
+                      id="AIdurationMin" /></span
+                ></span>
+                :
+                <span
+                  ><span
+                    ><input
+                      type="text"
+                      name="AIdurationHour"
+                      id="AIdurationHour" /></span
+                ></span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: center" colspan="2">
+              <button id="autoIrrSave" class="loadingButton"></button>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="square recentIrrDiv">
+        <h3>آبیاری های اخیر</h3>
+        <div>
+          <table class="recordTable">
+            <thead>
+              <tr>
+                <td>ردیف</td>
+                <td>روز</td>
+                <td>تاریخ</td>
+                <td>ساعت</td>
+                <td>مدت زمان آبدهی</td>
+              </tr>
+            </thead>
+            <tbody id="recIrr"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script src="./script/mqtt.js"></script>
+    <script src="./script/logic_http.js"></script>
+    <script src="./script/irrRec.js"></script>
+  </body>
+</html>
