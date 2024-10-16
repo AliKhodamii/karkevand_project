@@ -20,11 +20,7 @@ document.getElementById("valveButton").onclick = vlvBtnClick;
 document.getElementById("autoIrrButton").onclick = autoIrrBtnClick;
 document.getElementById("autoIrrSave").onclick = saveBtnClick;
 
-// connect to mqtt broker
-// mqttConnect();
 
-// publish give info message every 5 seconds
-// var t = setInterval(getInfo, 5000);
 
 //------------functions------------\\
 //------------functions------------\\
@@ -41,6 +37,14 @@ function getInfo(url) {
   console.log("recived info : \n" + sysInfoJson);
 
   if (!waitingForResponse) updateUI();
+}
+
+function getCmdInfo(url){
+  var xmlHttp = new XMLHttpRequest();
+  xmlHttp.open("GET", url, false); // false for synchronous request
+  xmlHttp.send(null);
+  sysInfoJson = xmlHttp.responseText;
+  console.log("recived info : \n" + sysInfoJson);
 }
 
 function updateUI() {
