@@ -48,7 +48,8 @@ int hour = 0;
 int minute = 0;
 
 // command variables
-bool valveCmd = false;
+String valveCmd = "noAction";
+
 bool restartCmd = false;
 bool autoIrrEnCmd = false;
 
@@ -113,7 +114,7 @@ bool insertRec();
 bool valveClose();
 String myTime();
 void dataUpdateForStart();
-String dataprepareForEEPROM();
+String dataPrepareForEEPROM();
 //-----------------------------------
 
 // declare json handler
@@ -161,7 +162,7 @@ void loop()
         // check for valve open cmd
         if (valve && !openedOnce)
         {
-            Serial.println("Valve Open cmd, Openning valve...");
+            Serial.println("Valve Open cmd, Opening valve...");
             valveOpen();
         }
 
@@ -185,7 +186,7 @@ void loop()
     if (millis() - loop1sec > 1000)
     {
         loop1sec = millis();
-        if (valve && (millis() - irrStartTime) > duration * 1000)
+        if (valve && (millis() - irrStartTime) > duration * 1000 * 60)
         {
             Serial.println("Duration finished, Closing valve...");
             autoIrrIsWorking = false;
@@ -436,7 +437,7 @@ bool gsmGet()
 }
 void dataUpdateForCmd()
 {
-    valveCmd = cmdInfo["valveCmd"];
+    valveCmd = String(cmdInfo["valveCmd"]);
     restartCmd = cmdInfo["restartCmd"];
     durationCmd = cmdInfo["durationCmd"];
     autoIrrEnCmd = cmdInfo["autoIrrEnCmd"];
@@ -471,7 +472,10 @@ void dataUpdateForCmd()
     }
 
     // update system info
-    valve = valveCmd;
+    if (valveCmd == "close")
+        valve = 0;
+    if (valveCmd == "open")
+        valve = 1;
     restart = restartCmd;
     duration = durationCmd;
     duration = durationCmd;
@@ -487,7 +491,8 @@ void dataUpdateForStart()
     // valveCmd = "noAction";
     // valve = sysInfo["valve"];
     // restartCmd = restart = sysInfo["restart"];
-    valveCmd = valve = false;
+    valveCmd = "noAction";
+    valve = false;
     restartCmd = restart = false;
     copy = false;
 
@@ -522,7 +527,7 @@ String dataPrepareForSys()
 }
 String dataPrepareForCmd()
 {
-    cmdInfo["valveCmd"] = valve;
+    cmdInfo["valveCmd"] = "noAction";
     cmdInfo["restartCmd"] = restart;
     cmdInfo["autoIrrEnCmd"] = autoIrrEn;
     cmdInfo["durationCmd"] = duration;
@@ -538,7 +543,7 @@ String dataPrepareForCmd()
 
     return cmdInfoJson;
 }
-String dataprepareForEEPROM()
+String dataPrepareForEEPROM()
 {
     eepromInfo["duration"] = duration;
     eepromInfo["humHiLi"] = humHiLi;
@@ -612,6 +617,7 @@ bool valveOpen()
     putToEEPROM();
     createNextIrrTimeStamp();
 
+    gsmPost(dataPrepareForCmd(), 0);
     gsmPost(dataPrepareForSys(), 1);
     insertRec();
     return 1;
@@ -648,7 +654,7 @@ int rtcTimeDate()
 }
 void putToEEPROM()
 {
-    dataprepareForEEPROM();
+    dataPrepareForEEPROM();
     // write valve false to sys
     EEPROM.begin(EEPROM_SIZE);
     Serial.println("putting data to EEPROM");
@@ -794,6 +800,7 @@ bool valveClose()
     copy = true;
     copyTimer = millis();
     digitalWrite(valvePin, valve);
+    gsmPost(dataPrepareForCmd(), 0);
     gsmPost(dataPrepareForSys(), 1);
     return 1;
 };
