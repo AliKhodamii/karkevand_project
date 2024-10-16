@@ -1,9 +1,11 @@
 {
-    "valve" : false,
-    "duration" : 2,
-    "copy" : false,
-    "restart" : false,
-    "humidity" : false,
-    "humidityHighLimit" : 200,
-    "humidityLowLimit" : 300
+    "valveCmd": "open",
+    "restartCmd": false,
+    "autoIrrEnCmd": false,
+    "durationCmd": 2,
+    "howOftenCmd": 3,
+    "hourCmd": 21,
+    "minuteCmd": 0,
+    "humHiLiCmd": 800,
+    "humLoLiCmd": 1024
 }

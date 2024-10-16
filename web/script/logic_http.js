@@ -1,26 +1,28 @@
-// var subTopic = "karSSG/ESP";
-var subTopic = "sedsmarthome/feeds/karssg.esp";
-// var pubTopic = "karSSG/client";
-var pubTopic = "sedsmarthome/feeds/karssg.client";
+// variables
 var sysInfoJson = "";
+var cmdInfoJson = "";
 var updateAutoIrrSec = true;
 var updateDurationEn = true;
 var waitingForResponse = false;
 var unsuccessfulTries = 0;
 var sysInfo;
+var cmdInfo;
 var client;
 
-url = "http://sed-smarthome.ir/karkevand/httpProt/getInfoWeb.php";
+sysUrl = "http://sed-smarthome.ir/karkevand/httpProt/getInfoWeb.php?file=sys";
+cmdUrl = "http://sed-smarthome.ir/karkevand/httpProt/getInfoWeb.php?file=cmd";
+postCmdUrl = "http://sed-smarthome.ir/karkevand/httpProt/postInfo.php";
+
+getCmdInfo(cmdUrl);
+getInfo(sysUrl);
 
 // get info every 3 sec
-var t = setInterval(getInfo, 3000, url);
+var t = setInterval(getInfo, 3000, sysUrl);
 
 //asign functions to buttons
 document.getElementById("valveButton").onclick = vlvBtnClick;
 document.getElementById("autoIrrButton").onclick = autoIrrBtnClick;
 document.getElementById("autoIrrSave").onclick = saveBtnClick;
-
-
 
 //------------functions------------\\
 //------------functions------------\\
@@ -30,21 +32,48 @@ document.getElementById("autoIrrSave").onclick = saveBtnClick;
 //------------functions------------\\
 
 function getInfo(url) {
-  var xmlHttp = new XMLHttpRequest();
-  xmlHttp.open("GET", url, false); // false for synchronous request
-  xmlHttp.send(null);
-  sysInfoJson = xmlHttp.responseText;
-  console.log("recived info : \n" + sysInfoJson);
+  fetch(url)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok: " + response.statusText);
+      }
+      return response.text(); // or response.json() depending on the server's response
+    })
+    .catch((error) => {
+      // Handle any errors
+      console.error("Fetch error:", error);
+    })
 
-  if (!waitingForResponse) updateUI();
+    .then((data) => {
+      // Handle the response data
+      sysInfoJson = data;
+      console.log("sysInfo:\n", sysInfoJson);
+      if (!waitingForResponse) updateUI();
+      if (sysInfo.copy && waitingForResponse) {
+        waitingForResponse = false;
+        updateUI();
+      }
+    });
 }
 
-function getCmdInfo(url){
-  var xmlHttp = new XMLHttpRequest();
-  xmlHttp.open("GET", url, false); // false for synchronous request
-  xmlHttp.send(null);
-  sysInfoJson = xmlHttp.responseText;
-  console.log("recived info : \n" + sysInfoJson);
+function getCmdInfo(url) {
+  fetch(url)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok: " + response.statusText);
+      }
+      return response.text(); // or response.json() depending on the server's response
+    })
+    .catch((error) => {
+      // Handle any errors
+      console.error("Fetch error:", error);
+    })
+    .then((data) => {
+      // Handle the response data
+      cmdInfoJson = data;
+      console.log("cmdInfo:\n" + cmdInfoJson);
+      cmdInfo = JSON.parse(cmdInfoJson);
+    });
 }
 
 function updateUI() {
@@ -276,30 +305,26 @@ function vlvBtnClick() {
 
   // check if valve is open
   if (sysInfo.valve) {
-    client.subscribe(subTopic, (err) => {
-      if (!err) {
-        client.publish(pubTopic, "valve close");
-        console.log("sent data: close valve0");
-      }
-    });
+    console.log("Closing Valve");
+
+    //prepare data to post
+    cmdInfo.valveCmd = "close";
+    cmdInfoJson = JSON.stringify(cmdInfo);
+
+    //post new data to cmdInfo
+    post();
   } else {
-    // create a json to send
-    var cmd = {};
+    //prepare data to send
+
     var hour = document.getElementById("durationHour").value;
     var min = document.getElementById("durationMin").value;
     var irrDuration = Number(hour) * 60 + Number(min);
-    cmd.duration = irrDuration;
-    vlvOpenCmd = "valve open, info" + JSON.stringify(cmd);
+    cmdInfo.durationCmd = irrDuration;
+    cmdInfo.valveCmd = "open";
+    cmdInfoJson = JSON.stringify(cmdInfo);
 
-    console.log(vlvOpenCmd);
-
-    // publish open cmd
-    client.subscribe(subTopic, (err) => {
-      if (!err) {
-        client.publish(pubTopic, vlvOpenCmd);
-        console.log("data sent: " + vlvOpenCmd);
-      }
-    });
+    //post new data to cdmInfo
+    post();
   }
 
   // update button css
@@ -316,41 +341,28 @@ function autoIrrBtnClick() {
   waitingForResponse = true;
   //check if auto irr was enable or not
   if (sysInfo.autoIrrEn) {
-    // publish open cmd
-    client.subscribe(subTopic, (err) => {
-      if (!err) {
-        client.publish(pubTopic, "autoIrrigationOff");
-        console.log("data sent: " + "autoIrrigationOff");
-      }
-    });
+    //prepare data to post in cmdInfo
+    cmdInfo.autoIrrEnCmd = false;
+    cmdInfoJson = JSON.stringify(cmdInfo);
+
+    //post new data
+    post();
   } else {
-    // create command json
-    var cmd = {};
+    // prepare data to send to cmdInfo
     var AIhour = sysInfo.hour;
-    var AImin = sysInfo.min;
+    var AImin = sysInfo.minute;
     var irrHowOften = sysInfo.howOften;
     var irrDuration = sysInfo.duration;
-    // var hour = document.getElementById("AIdurationHour").value;
-    // var min = document.getElementById("AIdurationMin").value;
-    // var irrHowOften = document.getElementById("howOften").value;
-    // var AImin = document.getElementById("minute").value;
-    // var AIhour = document.getElementById("hour").value;
-    // var irrDuration = Number(hour) * 60 + Number(min);
-    cmd.autoIrrEn = 1;
-    cmd.duration = irrDuration;
-    cmd.minute = AImin;
-    cmd.hour = AIhour;
-    cmd.howOften = irrHowOften;
 
-    var updInfoJson = "autoIrrigationOn, info" + JSON.stringify(cmd);
+    cmdInfo.autoIrrEnCmd = 1;
+    cmdInfo.durationCmd = irrDuration;
+    cmdInfo.minuteCmd = AImin;
+    cmdInfo.hourCmd = AIhour;
+    cmdInfo.howOftenCmd = irrHowOften;
+    cmdInfoJson = JSON.stringify(cmdInfo);
 
-    // publish open cmd
-    client.subscribe(subTopic, (err) => {
-      if (!err) {
-        client.publish(pubTopic, updInfoJson);
-        console.log("data sent: " + updInfoJson);
-      }
-    });
+    // post new data
+    post();
   }
 
   //update button
@@ -368,28 +380,22 @@ function saveBtnClick() {
   //wait for valve open response
   waitingForResponse = true;
 
-  // create command json
-  var cmd = {};
+  // prepare data to post in cmdInfo
   var hour = document.getElementById("AIdurationHour").value;
   var min = document.getElementById("AIdurationMin").value;
   var irrHowOften = document.getElementById("howOften").value;
   var AImin = document.getElementById("minute").value;
   var AIhour = document.getElementById("hour").value;
   var irrDuration = Number(hour) * 60 + Number(min);
-  cmd.autoIrrEn = sysInfo.autoIrrEn;
-  cmd.duration = irrDuration;
-  cmd.minute = AImin;
-  cmd.hour = AIhour;
-  cmd.howOften = irrHowOften;
+  cmdInfo.autoIrrEnCmd = sysInfo.autoIrrEn;
+  cmdInfo.durationCmd = irrDuration;
+  cmdInfo.minuteCmd = AImin;
+  cmdInfo.hourCmd = AIhour;
+  cmdInfo.howOftenCmd = irrHowOften;
 
-  var updInfoJson = "autoIrrigationUpdate, info" + JSON.stringify(cmd);
-  // publish open cmd
-  client.subscribe(subTopic, (err) => {
-    if (!err) {
-      client.publish(pubTopic, updInfoJson);
-      console.log("data sent: " + updInfoJson);
-    }
-  });
+  cmdInfoJson = JSON.stringify(cmdInfo);
+  // post new data to cmdInfo
+  post();
 
   //update button
   document.getElementById("autoIrrSave").classList.remove("greenButton");
@@ -411,6 +417,16 @@ function insertIntoDB() {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: "insertIntoDB=" + sendDataJson,
+  }).then((res) => {
+    console.log("Request complete! response:", res);
+  });
+}
+
+function post() {
+  fetch(postCmdUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "cmdInfo=" + cmdInfoJson,
   }).then((res) => {
     console.log("Request complete! response:", res);
   });

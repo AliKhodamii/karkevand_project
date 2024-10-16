@@ -1,0 +1,14 @@
+{
+    "working time": "0:0:0:27",
+    "valve": 0,
+    "humidity": 0,
+    "copy": true,
+    "duration": 2,
+    "humHiLi": 800,
+    "humLoLi": 1024,
+    "lastIrrTS": 1072915443,
+    "autoIrrEn": 1,
+    "howOften": 3,
+    "hour": 21,
+    "minute": 0
+}
