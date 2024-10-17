@@ -47,6 +47,7 @@ function getInfo(url) {
     .then((data) => {
       // Handle the response data
       sysInfoJson = data;
+      sysInfo = JSON.parse(sysInfoJson);
       console.log("sysInfo:\n", sysInfoJson);
       if (!waitingForResponse) updateUI();
       if (sysInfo.copy && waitingForResponse) {

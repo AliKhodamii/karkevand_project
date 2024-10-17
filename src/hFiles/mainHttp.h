@@ -2,8 +2,8 @@
 #define TINY_GSM_MODEM_SIM800  // Define the modem type as SIM800
 #define TINY_GSM_USE_GPRS true // We're using GPRS, not WiFi
 #define SerialMon Serial       // For debugging
-#define MODEM_RX D7            // RX pin of ESP8266 connected to TX pin of SIM800L
-#define MODEM_TX D6            // TX pin of ESP8266 connected to RX pin of SIM800L
+// #define MODEM_RX D7            // RX pin of ESP8266 connected to TX pin of SIM800L
+// #define MODEM_TX D6            // TX pin of ESP8266 connected to RX pin of SIM800L
 #define EEPROM_SIZE 4096
 // ---------------------------
 
@@ -13,6 +13,9 @@
 #include <SoftwareSerial.h>
 #include <ArduinoJson.h>
 #include <EEPROM.h>
+#include <math.h>
+
+#include "pinInit.h"
 // ---------------------------
 
 // path variables------------------
@@ -64,12 +67,12 @@ int minuteCmd = 0;
 
 // pin initialize-------------
 // 1-valve 2,3-TX RX 4-LowHumidity 5-NormalHumidity 6-sim800reset 7-comPin 8-
-const int valvePin = D1;
-const int lowHumidityPin = D2;
-const int normalHumidityPin = D3;
-const int sim800ResetPin = D5;
-const int comPin = D0;
-const int humidityPin = A0;
+// const int valvePin = D3;
+// const int lowHumidityPin = D2;
+// const int normalHumidityPin = D3;
+// const int sim800ResetPin = D5;
+// const int comPin = D0;
+// const int humidityPin = A0;
 // ---------------------------
 
 // time variables-----------------
@@ -115,6 +118,8 @@ bool valveClose();
 String myTime();
 void dataUpdateForStart();
 String dataPrepareForEEPROM();
+void syncTime();
+int humidityRead();
 //-----------------------------------
 
 // declare json handler
@@ -138,6 +143,8 @@ void setup()
 
     // check if modem is connected to network
     gprsConnect();
+
+    syncTime();
 
     // post starting message to sysInfo & cmdInfo to go to 0 position
     // both sysInfo & cmdInfo must be in same 0 position
@@ -400,7 +407,7 @@ bool gsmGet()
     int statusCode = 0;
     int tryNum = 0;
     String response = "";
-    while (statusCode != 200 || response != "")
+    while (statusCode != 200 || response == "")
     {
         tryNum++;
         // Send the HTTP GET request
@@ -508,14 +515,16 @@ void dataUpdateForStart()
 }
 String dataPrepareForSys()
 {
+
     sysInfo["working time"] = myTime();
     sysInfo["valve"] = valve;
-    sysInfo["humidity"] = humidity;
+    sysInfo["humidity"] = humidityRead();
     sysInfo["copy"] = copy;
     sysInfo["duration"] = duration;
     sysInfo["humHiLi"] = humHiLi;
     sysInfo["humLoLi"] = humLoLi;
     sysInfo["lastIrrTS"] = lastIrrTS;
+    sysInfo["autoIrrEn"] = autoIrrEn;
     sysInfo["howOften"] = howOften;
     sysInfo["hour"] = hour;
     sysInfo["minute"] = minute;
@@ -811,4 +820,43 @@ String myTime()
     int minutes = ((millis() - days * 86400000) - hours * 3600000) / 60000;
     int seconds = (millis() / 1000) % 60;
     return String(days) + ":" + String(hours) + ":" + String(minutes) + ":" + String(seconds);
+}
+void syncTime()
+{
+    // sync modem time with tehran time
+    if (modem.NTPServerSync())
+    {
+        Serial.println("Time synced successfully");
+        Serial.print("Current time: ");
+        Serial.println(modem.getGSMDateTime(DATE_FULL)); // Print current time
+    }
+    else
+    {
+        Serial.println("Failed to sync time");
+    }
+}
+int humidityRead()
+{
+    // humidity = analogRead(humidityPin);
+    for (int i = 0; i < 10; i++)
+    {
+        humidity = humidity + analogRead(humidityPin);
+        delay(10);
+    }
+    humidity = humidity / 10;
+
+    // scaling
+    float shib = -100.0 / (humLoLi - humHiLi);
+    float result = shib * (humidity - humHiLi) + 100;
+    humidity = round(result);
+    if (humidity <= 0)
+    {
+        humidity = 0;
+    }
+    else if (humidity >= 100)
+    {
+        humidity = 100;
+    }
+
+    return humidity;
 }
