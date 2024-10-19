@@ -50,6 +50,10 @@ int howOften = 0;
 int hour = 0;
 int minute = 0;
 
+// max try variable
+int getErrCnt = 0;
+int postErrCnt = 0;
+
 // command variables
 String valveCmd = "noAction";
 
@@ -227,6 +231,12 @@ void loop()
     {
         copy = 0;
         gsmPost(dataPrepareForSys(), 1);
+    }
+
+    // restart commands
+    if (restart || getErrCnt > 2)
+    {
+        sysRestart();
     }
 }
 
@@ -422,10 +432,12 @@ bool gsmGet()
         SerialMon.println(response);
         if (tryNum > 3)
         {
+            getErrCnt++;
             return false;
         }
         if (statusCode == 200 && response != "")
         {
+            getErrCnt = 0;
             break;
         }
         delay(1000);
