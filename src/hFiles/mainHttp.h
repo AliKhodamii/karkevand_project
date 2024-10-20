@@ -139,6 +139,9 @@ void setup()
     // get initial data from EEPROM
     getFromEEPROM();
 
+    // create next autoIrr time
+    createNextIrrTimeStamp();
+
     // pins initial values
     pinInit();
 
@@ -264,7 +267,7 @@ void netConnect()
             delay(5000);
 
             // if network didn't connect in 2 mins
-            if (millis() - waitTime > 120000)
+            if (millis() - waitTime > 60000)
             {
                 sysRestart();
             }
@@ -482,6 +485,9 @@ void dataUpdateForCmd()
         humHiLi = humHiLiCmd;
         humLoLi = humLoLiCmd;
 
+        // create next autoIrr  time
+        createNextIrrTimeStamp();
+
         copy = 1;
         copyTimer = millis();
 
@@ -569,6 +575,7 @@ String dataPrepareForEEPROM()
     eepromInfo["duration"] = duration;
     eepromInfo["humHiLi"] = humHiLi;
     eepromInfo["humLoLi"] = humLoLi;
+    eepromInfo["autoIrrEn"] = autoIrrEn;
     eepromInfo["lastIrrTS"] = lastIrrTS;
     eepromInfo["howOften"] = howOften;
     eepromInfo["hour"] = hour;
