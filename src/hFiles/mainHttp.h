@@ -49,6 +49,8 @@ int nextIrrTS = 0;
 int howOften = 0;
 int hour = 0;
 int minute = 0;
+int humHiVote = 0;
+int humLoVote = 0;
 
 // max try variable
 int getErrCnt = 0;
@@ -124,6 +126,7 @@ void dataUpdateForStart();
 String dataPrepareForEEPROM();
 void syncTime();
 int humidityRead();
+void humidityLED();
 //-----------------------------------
 
 // declare json handler
@@ -237,7 +240,7 @@ void loop()
     }
 
     // restart commands
-    if (restart || getErrCnt > 2)
+    if (restart || getErrCnt > 2 || postErrCnt > 2)
     {
         sysRestart();
     }
@@ -378,6 +381,14 @@ bool gsmPost(String postData, bool isSys /*is it a sys info*/)
             SerialMon.println(response);
             // Close the connection
             http.stop();
+            if (statusCode != 200)
+            {
+                postErrCnt++;
+            }
+            if (statusCode == 200)
+            {
+                postErrCnt = 0;
+            }
             SerialMon.println("Server disconnected");
 
             if (statusCode == 200)
@@ -535,6 +546,7 @@ String dataPrepareForSys()
 {
 
     sysInfo["working time"] = myTime();
+    sysInfo["current time"] = modem.getGSMDateTime(DATE_FULL);
     sysInfo["valve"] = valve;
     sysInfo["humidity"] = humidityRead();
     sysInfo["copy"] = copy;
@@ -877,5 +889,36 @@ int humidityRead()
         humidity = 100;
     }
 
+    //turn on appropriate LED
+    humidityLED();
+
     return humidity;
+}
+
+void humidityLED()
+{
+    Serial.println("calculating vote for hum LED");
+    if (humidity > 30)
+    {
+        humHiVote > 9 ? humHiVote = 10 : humHiVote++;
+    }
+    else
+    {
+        humLoVote > 9 ? humLoVote = 10 : humLoVote++;
+    }
+
+    if (humHiVote > 9)
+    {
+    Serial.println("hum is high , Green LED will turn on");
+        humLoVote = 0;
+        digitalWrite(lowHumidityPin, 0);
+        digitalWrite(normalHumidityPin, 1);
+    }
+    else if (humLoVote > 9)
+    {
+    Serial.println("hum is low , Red LED will turn on");
+        humHiVote = 0;
+        digitalWrite(lowHumidityPin, 1);
+        digitalWrite(normalHumidityPin, 0);
+    }
 }
